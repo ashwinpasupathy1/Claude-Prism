@@ -29,6 +29,9 @@ contingency                 -> validate_contingency()
 chi_square_gof              -> validate_chi_square_gof()
 bland_altman                -> validate_bland_altman()
 forest_plot                 -> validate_forest_plot()
+area_chart, raincloud, qq_plot, lollipop, waterfall, ecdf
+                            -> validate_bar()  (flat-header layout)
+pyramid                     -> validate_pyramid()
 """
 
 from __future__ import annotations
@@ -477,6 +480,38 @@ def validate_forest_plot(df):
         if (ci_lo > effects).any() or (ci_hi < effects).any():
             warnings.append("Some CI bounds are inverted (CI_lo > Effect or CI_hi < Effect).")
     return errors, warnings
+
+
+def validate_pyramid(df):
+    """Validate Population Pyramid layout: Row 1 = headers, Rows 2+ = values.
+
+    Expected 3 columns: Category, Left series, Right series.
+    """
+    pd = _pd()
+    errors, warnings = [], []
+    if df.shape[1] < 3:
+        errors.append(
+            "Need exactly 3 columns: Category, Left series, Right series.")
+        return errors, warnings
+    if df.shape[0] < 2:
+        errors.append("Need a header row + at least 1 data row.")
+        return errors, warnings
+    for ci, name in ((1, "Left series"), (2, "Right series")):
+        col = pd.to_numeric(df.iloc[1:, ci], errors="coerce")
+        if col.isna().all():
+            errors.append(
+                f"{name} (column {ci + 1}) contains no numeric data.")
+    if not errors:
+        left  = pd.to_numeric(df.iloc[1:, 1], errors="coerce").dropna()
+        right = pd.to_numeric(df.iloc[1:, 2], errors="coerce").dropna()
+        if len(left) == 0 or len(right) == 0:
+            errors.append("Left and right series must have at least one value each.")
+        elif len(left) != len(right):
+            warnings.append(
+                f"Left series has {len(left)} rows, right has {len(right)}; "
+                "unequal lengths will be truncated to the shorter.")
+    return errors, warnings
+
 
 # ── Stats tab: Repeated Measures ─────────────────────────────────────────
 

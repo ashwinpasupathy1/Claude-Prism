@@ -55,7 +55,7 @@ try:
         validate_flat_header, validate_bar, validate_line,
         validate_grouped_bar, validate_kaplan_meier, validate_heatmap,
         validate_two_way_anova, validate_contingency, validate_chi_square_gof,
-        validate_bland_altman, validate_forest_plot,
+        validate_bland_altman, validate_forest_plot, validate_pyramid,
     )
     _VALIDATORS_AVAILABLE = True
 except ImportError as _e:
@@ -610,6 +610,78 @@ _REGISTRY_SPECS = [
             "ref_value":    app._get_float("fp_ref_value", 0.0),
             "show_weights": app._get_var("fp_show_weights", True),
             "show_summary": app._get_var("fp_show_summary", True),
+        }),
+    ),
+    PlotTypeConfig(
+        key="area_chart", label="Area Chart", fn_name="prism_area_chart",
+        tab_mode="bar", stats_tab="standard",
+        validate="_validate_bar",
+        has_points=False, has_error_bars=True, has_legend=True, has_stats=False, x_continuous=False,
+        axes_has_bar_width=False, axes_has_line_opts=True,
+        extra_collect=lambda app, kw: kw.update({
+            "stacked":    False,
+            "fill_alpha": 0.25,
+        }),
+    ),
+    PlotTypeConfig(
+        key="raincloud", label="Raincloud", fn_name="prism_raincloud",
+        tab_mode="bar", stats_tab="standard",
+        validate="_validate_bar",
+        has_points=True, has_error_bars=False, has_legend=False, has_stats=True, x_continuous=False,
+        axes_has_bar_width=False, axes_has_line_opts=False,
+        extra_collect=lambda app, kw: kw.update({
+            "show_box": True,
+        }),
+    ),
+    PlotTypeConfig(
+        key="qq_plot", label="Q-Q Plot", fn_name="prism_qq_plot",
+        tab_mode="bar", stats_tab="standard",
+        validate="_validate_bar",
+        has_points=True, has_error_bars=False, has_legend=True, has_stats=False, x_continuous=False,
+        axes_has_bar_width=False, axes_has_line_opts=False,
+        extra_collect=lambda app, kw: kw.update({
+            "show_ci_band": True,
+            "ci_alpha":     0.15,
+        }),
+    ),
+    PlotTypeConfig(
+        key="lollipop", label="Lollipop", fn_name="prism_lollipop",
+        tab_mode="bar", stats_tab="standard",
+        validate="_validate_bar",
+        has_points=False, has_error_bars=True, has_legend=False, has_stats=True, x_continuous=False,
+        axes_has_bar_width=False, axes_has_line_opts=False,
+        extra_collect=lambda app, kw: kw.update({
+            "marker_size": 10.0,
+            "stem_width":  1.5,
+        }),
+    ),
+    PlotTypeConfig(
+        key="waterfall", label="Waterfall", fn_name="prism_waterfall",
+        tab_mode="bar", stats_tab="standard",
+        validate="_validate_bar",
+        has_points=False, has_error_bars=False, has_legend=False, has_stats=False, x_continuous=False,
+        axes_has_bar_width=True, axes_has_line_opts=False,
+        extra_collect=lambda app, kw: kw.update({
+            "show_connector_lines": True,
+            "show_total":           True,
+        }),
+    ),
+    PlotTypeConfig(
+        key="pyramid", label="Pyramid", fn_name="prism_pyramid",
+        tab_mode="bar", stats_tab="standard",
+        validate="_validate_pyramid",
+        has_points=False, has_error_bars=False, has_legend=True, has_stats=False, x_continuous=False,
+        axes_has_bar_width=True, axes_has_line_opts=False,
+        extra_collect=None,
+    ),
+    PlotTypeConfig(
+        key="ecdf", label="ECDF", fn_name="prism_ecdf",
+        tab_mode="bar", stats_tab="standard",
+        validate="_validate_bar",
+        has_points=True, has_error_bars=False, has_legend=True, has_stats=False, x_continuous=False,
+        axes_has_bar_width=False, axes_has_line_opts=True,
+        extra_collect=lambda app, kw: kw.update({
+            "complementary": False,
         }),
     ),
 ]
@@ -4755,6 +4827,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             "_validate_chi_square_gof":validate_chi_square_gof if _VALIDATORS_AVAILABLE else None,
             "_validate_bland_altman":  validate_bland_altman  if _VALIDATORS_AVAILABLE else None,
             "_validate_forest_plot":   validate_forest_plot   if _VALIDATORS_AVAILABLE else None,
+            "_validate_pyramid":       validate_pyramid       if _VALIDATORS_AVAILABLE else None,
         }
         standalone = _STANDALONE_VALIDATORS.get(spec.validate)
         if standalone is not None:
