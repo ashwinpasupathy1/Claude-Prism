@@ -18,22 +18,23 @@ ROOT = Path(__file__).parent.parent.parent  # .claude/hooks/ -> project root
 # ── Source files tracked in the File Map ─────────────────────────────────────
 SOURCE_FILES = [
     "prism_barplot_app.py",
+    "prism_registry.py",
     "prism_functions.py",
     "prism_canvas_renderer.py",
     "prism_widgets.py",
     "prism_validators.py",
     "prism_results.py",
-    "prism_test_harness.py",
+    "tests/prism_test_harness.py",
     "run_all.py",
 ]
 
-# ── Test suites ───────────────────────────────────────────────────────────────
+# ── Test suites (files moved to tests/ subfolder) ─────────────────────────────
 TEST_FILES = {
-    "comprehensive":   "test_comprehensive.py",
-    "canvas_renderer": "test_canvas_renderer.py",
-    "modular":         "test_modular.py",
-    "p1p2p3":          "test_p1_p2_p3.py",
-    "control":         "test_control.py",
+    "comprehensive":   "tests/test_comprehensive.py",
+    "canvas_renderer": "tests/test_canvas_renderer.py",
+    "modular":         "tests/test_modular.py",
+    "p1p2p3":          "tests/test_p1_p2_p3.py",
+    "control":         "tests/test_control.py",
 }
 
 
@@ -54,11 +55,16 @@ def test_count(filename: str) -> int:
 
 
 def registered_chart_count() -> int:
-    path = ROOT / "prism_barplot_app.py"
-    if not path.exists():
-        return 0
-    content = path.read_text(errors="replace")
-    return len(re.findall(r"^\s+PlotTypeConfig\(", content, re.MULTILINE))
+    # Registry lives in prism_registry.py; fall back to prism_barplot_app.py
+    for candidate in ("prism_registry.py", "prism_barplot_app.py"):
+        path = ROOT / candidate
+        if not path.exists():
+            continue
+        content = path.read_text(errors="replace")
+        count = len(re.findall(r"^\s+PlotTypeConfig\(", content, re.MULTILINE))
+        if count:
+            return count
+    return 0
 
 
 def round_approx(n: int, base: int = 50) -> str:
@@ -149,9 +155,11 @@ def update_claude_md(counts: dict[str, int]) -> bool:
     for fname, count in counts.items():
         # Match:  filename    <digits with optional comma>  lines   <description>
         # e.g.:   prism_barplot_app.py      7,834 lines   App class...
+        # Use basename only (some files are stored as tests/foo.py)
+        basename = Path(fname).name
         pattern = (
             r"((?:^|\n)(?:[ \t]*)"
-            + re.escape(fname)
+            + re.escape(basename)
             + r"[ \t]+)[\d,]+([ \t]+lines)"
         )
         replacement = rf"\g<1>{count:,}\2"
@@ -174,12 +182,13 @@ def update_readme(counts: dict[str, int], n_charts: int) -> bool:
 
     # Update approximate line counts in Architecture section
     readme_bases = {
-        "prism_barplot_app.py":   200,
-        "prism_functions.py":     200,
+        "prism_barplot_app.py":     200,
+        "prism_registry.py":        50,
+        "prism_functions.py":       200,
         "prism_canvas_renderer.py": 100,
-        "prism_widgets.py":       50,
-        "prism_validators.py":    10,
-        "prism_results.py":       10,
+        "prism_widgets.py":         50,
+        "prism_validators.py":      10,
+        "prism_results.py":         10,
     }
 
     for fname, base in readme_bases.items():
