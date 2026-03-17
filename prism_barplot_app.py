@@ -84,8 +84,8 @@ except ImportError:
     DND_FILES      = None
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-ICON_PNG   = os.path.join(SCRIPT_DIR, "AppIcon.png")
-ICON_ICNS  = os.path.join(SCRIPT_DIR, "AppIcon.icns")
+ICON_PNG   = os.path.join(SCRIPT_DIR, "assets", "AppIcon.png")
+ICON_ICNS  = os.path.join(SCRIPT_DIR, "assets", "AppIcon.icns")
 
 # Add the script directory to sys.path so prism_functions is importable
 import sys

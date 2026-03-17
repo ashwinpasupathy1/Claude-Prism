@@ -143,11 +143,11 @@ The app validates your spreadsheet layout before plotting and shows specific err
 Claude Prism is split into six focused modules with no circular dependencies.
 
 ```
-prism_barplot_app.py      ~7,800 lines   App class, PLOT_REGISTRY, sidebar, tabs
+prism_barplot_app.py      ~8,000 lines   App class, PLOT_REGISTRY, sidebar, tabs
 prism_widgets.py            ~950 lines   Design-system tokens, PButton/PEntry/etc.
-prism_validators.py         ~480 lines   Standalone spreadsheet validators
+prism_validators.py         ~520 lines   Standalone spreadsheet validators
 prism_results.py            ~390 lines   Results panel: populate / export / copy
-prism_functions.py        ~6,500 lines   29 Matplotlib chart functions
+prism_functions.py        ~6,400 lines   29 Matplotlib chart functions
 prism_canvas_renderer.py  ~1,700 lines   tk.Canvas live renderer (no Matplotlib)
 ```
 

@@ -41,9 +41,9 @@ python3 -c "import prism_functions, prism_canvas_renderer, prism_widgets, prism_
 ## File map
 
 ```
-prism_barplot_app.py      7,834 lines   App class, PLOT_REGISTRY, icon helpers
+prism_barplot_app.py      7,907 lines   App class, PLOT_REGISTRY, icon helpers
 prism_widgets.py            952 lines   _DS tokens, PButton/PEntry/PCheckbox etc.
-prism_validators.py         483 lines   Standalone spreadsheet validators
+prism_validators.py         518 lines   Standalone spreadsheet validators
 prism_results.py            387 lines   Results panel: populate / export / copy
 prism_functions.py        6,468 lines   29 matplotlib chart functions
 prism_canvas_renderer.py  1,687 lines   tk.Canvas bar+grouped-bar live renderer

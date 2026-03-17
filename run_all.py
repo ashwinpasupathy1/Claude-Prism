@@ -16,6 +16,7 @@ import sys, os, time, importlib, argparse
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
+sys.path.insert(0, os.path.join(_HERE, "tests"))
 
 import prism_test_harness as _h   # pre-loads pf + matplotlib once
 

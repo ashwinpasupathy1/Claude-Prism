@@ -21,13 +21,17 @@ if [ ! -f "$PY_FUNCS" ]; then
     echo "✗ Cannot find prism_functions.py"; exit 1
 fi
 
-# Locate icons — prefer loose files in the same folder, fall back to app bundle
-if [ -f "$SCRIPT_DIR/AppIcon.png" ]; then
+# Locate icons — prefer assets/ subfolder, fall back to loose files, then app bundle
+if [ -f "$SCRIPT_DIR/assets/AppIcon.png" ]; then
+    ICON_PNG="$SCRIPT_DIR/assets/AppIcon.png"
+elif [ -f "$SCRIPT_DIR/AppIcon.png" ]; then
     ICON_PNG="$SCRIPT_DIR/AppIcon.png"
 else
     ICON_PNG="$SCRIPT_DIR/Claude Prism.app/Contents/Resources/AppIcon.png"
 fi
-if [ -f "$SCRIPT_DIR/AppIcon.icns" ]; then
+if [ -f "$SCRIPT_DIR/assets/AppIcon.icns" ]; then
+    ICON_ICNS="$SCRIPT_DIR/assets/AppIcon.icns"
+elif [ -f "$SCRIPT_DIR/AppIcon.icns" ]; then
     ICON_ICNS="$SCRIPT_DIR/AppIcon.icns"
 else
     ICON_ICNS="$SCRIPT_DIR/Claude Prism.app/Contents/Resources/AppIcon.icns"
