@@ -739,6 +739,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
         self.bind("<Command-r>", lambda e: self._run())
         self.bind("<Command-z>", lambda e: self._undo())
+        self.bind("<Command-Z>", lambda e: self._do_redo())
         self.bind("<Command-e>", lambda e: self._download_png())
         self.bind("<Command-o>", lambda e: self._browse_file())
         self.bind("<Command-c>", lambda e: self._copy_to_clipboard())
@@ -5482,6 +5483,12 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             args=(copy.deepcopy(kw), tab_id, job_id),
             daemon=True,
         ).start()
+
+    def _do_redo(self):
+        """Redo using the UndoStack (⌘⇧Z)."""
+        if hasattr(self, "_undo_stack") and self._undo_stack.can_redo():
+            self._undo_stack.redo(self._vars)
+            self._set_status("Redone")
 
     def _get_var(self, key, default=None):
         """Safely get a tkvar value, returning default if not present."""
