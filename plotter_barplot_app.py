@@ -740,6 +740,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         self.bind("<Command-r>", lambda e: self._run())
         self.bind("<Command-z>", lambda e: self._undo())
         self.bind("<Command-Z>", lambda e: self._do_redo())
+        self.bind("<Command-s>", lambda e: self._save_project())
         self.bind("<Command-e>", lambda e: self._download_png())
         self.bind("<Command-o>", lambda e: self._browse_file())
         self.bind("<Command-c>", lambda e: self._copy_to_clipboard())
@@ -770,6 +771,14 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         file_menu.add_command(label="Open Excel File…",
                               accelerator="⌘O",
                               command=self._browse_file)
+        file_menu.add_command(label="Open .cplot Project…",
+                              command=self._open_cplot)
+        file_menu.add_command(label="Import .pzfx File…",
+                              command=self._open_pzfx)
+        file_menu.add_separator()
+        file_menu.add_command(label="Save Project…",
+                              accelerator="⌘S",
+                              command=self._save_project)
         file_menu.add_separator()
         file_menu.add_command(label="Generate Plot",
                               accelerator="⌘R",
@@ -6371,6 +6380,142 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 err = traceback.format_exc()
                 self.after(0, lambda: self._set_status(f"PDF export error: {exc}", err=True))
         threading.Thread(target=_do_export, daemon=True).start()
+
+    # ── Project file support (.cplot) ─────────────────────────────────────────
+
+    def _save_project(self):
+        """Save current app state as a .cplot project file."""
+        from tkinter import filedialog, messagebox
+        try:
+            from plotter_project import save_project
+        except ImportError:
+            messagebox.showerror("Error", "plotter_project module not available.")
+            return
+
+        path = filedialog.asksaveasfilename(
+            title="Save Project",
+            defaultextension=".cplot",
+            filetypes=[("Claude Plotter Project", "*.cplot"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+
+        try:
+            plot_type = self._plot_type.get() if hasattr(self, "_plot_type") else "bar"
+            excel_path = self._vars.get("excel_path", tk.StringVar()).get().strip()
+            sheet_var = self._vars.get("sheet")
+            sheet = sheet_var.get() if sheet_var else 0
+
+            # Capture thumbnail bytes if we have a figure
+            thumbnail_bytes = None
+            try:
+                if hasattr(self, "_fig") and self._fig is not None:
+                    import io
+                    buf = io.BytesIO()
+                    self._fig.savefig(buf, format="png", dpi=72, bbox_inches="tight")
+                    thumbnail_bytes = buf.getvalue()
+            except Exception:
+                pass
+
+            save_project(
+                path=path,
+                app_vars=self._vars,
+                plot_type=plot_type,
+                excel_path=excel_path,
+                sheet=sheet,
+                thumbnail_bytes=thumbnail_bytes,
+            )
+            self._set_status(f"Project saved: {path}")
+        except Exception as exc:
+            messagebox.showerror("Save failed", str(exc))
+
+    def _open_cplot(self):
+        """Open a .cplot project file and restore app state."""
+        from tkinter import filedialog, messagebox
+        try:
+            from plotter_project import load_project, extract_to_temp_excel
+        except ImportError:
+            messagebox.showerror("Error", "plotter_project module not available.")
+            return
+
+        path = filedialog.askopenfilename(
+            title="Open Project",
+            filetypes=[("Claude Plotter Project", "*.cplot"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+
+        try:
+            data = load_project(path)
+
+            # Restore plot type
+            pt = data.get("plot_type", "bar")
+            if hasattr(self, "_plot_type"):
+                self._plot_type.set(pt)
+                self._on_chart_type_change(pt)
+
+            # Restore UI state
+            state = data.get("state", {})
+            for key, value in state.items():
+                var = self._vars.get(key)
+                if var is not None:
+                    try:
+                        var.set(value)
+                    except Exception:
+                        pass
+
+            # Extract embedded Excel data and load it
+            try:
+                temp_path = extract_to_temp_excel(path)
+                if temp_path and hasattr(self, "_vars"):
+                    ep_var = self._vars.get("excel_path")
+                    if ep_var:
+                        ep_var.set(temp_path)
+                    self._load_sheets(temp_path)
+            except Exception:
+                pass
+
+            self._set_status(f"Project loaded: {path}")
+        except Exception as exc:
+            messagebox.showerror("Open failed", str(exc))
+
+    def _open_pzfx(self):
+        """Import a GraphPad Prism .pzfx file."""
+        from tkinter import filedialog, messagebox
+        try:
+            from plotter_import_pzfx import import_pzfx
+        except ImportError:
+            messagebox.showerror("Error", "plotter_import_pzfx module not available.")
+            return
+
+        path = filedialog.askopenfilename(
+            title="Import .pzfx File",
+            filetypes=[("GraphPad Prism", "*.pzfx"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+
+        try:
+            result = import_pzfx(path)
+            if result.errors:
+                messagebox.showerror("Import Error",
+                                     "\n".join(result.errors))
+                return
+            if result.warnings:
+                messagebox.showwarning("Import Warnings",
+                                       "\n".join(result.warnings))
+            if result.temp_path:
+                ep_var = self._vars.get("excel_path")
+                if ep_var:
+                    ep_var.set(result.temp_path)
+                self._load_sheets(result.temp_path)
+                # Set chart type if detected
+                if result.chart_type and hasattr(self, "_plot_type"):
+                    self._plot_type.set(result.chart_type)
+                    self._on_chart_type_change(result.chart_type)
+                self._set_status(f"Imported: {path}")
+        except Exception as exc:
+            messagebox.showerror("Import failed", str(exc))
 
 
 if __name__ == "__main__":
