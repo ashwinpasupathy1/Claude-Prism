@@ -393,6 +393,14 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         self._switching_tabs       = False   # True while TabManager.switch_to restores vars
         self._preview_after_id    = None   # pending after() id for live preview debounce
         self._live_preview_enabled = True  # can be toggled by user preference
+        # --- Wave 2 infrastructure ---
+        from plotter_events import EventBus
+        self._bus = EventBus()
+        from plotter_undo import UndoStack
+        self._undo_stack = UndoStack(max_depth=50)
+        from plotter_errors import reporter
+        reporter.set_root(self)
+        # --- end Wave 2 infrastructure ---
         ttk.Style().theme_use("aqua")
         set_dock_icon()
         self._set_tk_icon()
@@ -5775,6 +5783,8 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
     def _do_run(self, kw, tab_id=None, job_id=None):
         try:
+            if hasattr(self, "_bus"):
+                self._bus.emit("plot.started", kw=kw)
             pd = _pd()  # cached  -  no overhead after first call
             self._plt.close("all")
 
@@ -5868,10 +5878,13 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 fig, groups, kw=_kw_snap, tab_id=tab_id, job_id=job_id))
             # Re-enabled: populate results panel after plot embeds
             self.after(80, lambda: self._populate_results(_ep, _sh, _pt, _kw_snap))
-            pass
+            if hasattr(self, "_bus"):
+                self._bus.emit("plot.completed", kw=_kw_snap)
         except Exception:
             err = traceback.format_exc()
             short = err.strip().splitlines()[-1]
+            if hasattr(self, "_bus"):
+                self._bus.emit("plot.failed", error=short)
             self.after(0, lambda: self._set_status(f"Error: {short}", err=True))
             self.after(0, lambda: messagebox.showerror("Runtime error", err))
             self.after(0, self._reset_btn)
