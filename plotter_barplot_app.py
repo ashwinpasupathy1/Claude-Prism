@@ -435,6 +435,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
         # Phase 3: web view instances per tab
         self._plotly_views: dict = {}
+        self._use_webview = tk.BooleanVar(value=True)
 
     def _auto_save(self):
         """Save session state to disk every 30 seconds."""
@@ -881,6 +882,9 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         view_menu.add_command(label="Reset Zoom",
                               accelerator="⌘0",
                               command=self._reset_zoom)
+        view_menu.add_separator()
+        view_menu.add_checkbutton(label="Use Web Renderer (Plotly)",
+                                  variable=self._use_webview)
         view_menu.add_separator()
         view_menu.add_command(label="Reference Wiki",
                               command=self._open_wiki_popup)
@@ -6035,6 +6039,8 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
     def _try_webview_embed(self, plot_frame: "tk.Frame", chart_type: str, kw: dict) -> bool:
         """Try to embed a Plotly chart via pywebview. Returns True on success."""
         if not getattr(self, "_web_server_running", False):
+            return False
+        if not getattr(self, "_use_webview", None) or not self._use_webview.get():
             return False
         if chart_type not in self._WEBVIEW_CHART_TYPES:
             return False
