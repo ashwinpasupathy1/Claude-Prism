@@ -2,6 +2,7 @@
 and receives edit events from the pywebview frontend."""
 
 import json
+import os
 import threading
 from typing import Any, Optional
 
@@ -45,6 +46,11 @@ def _make_app():
         value: Any = None
         extra: dict[str, Any] = {}
 
+    from fastapi.responses import JSONResponse
+    from fastapi import Request
+
+    API_KEY = os.environ.get("PLOTTER_API_KEY", "")
+
     api = FastAPI(title="Claude Plotter API", version="1.0.0")
 
     api.add_middleware(
@@ -53,6 +59,16 @@ def _make_app():
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @api.middleware("http")
+    async def check_auth(request: Request, call_next):
+        """Require API key for non-local requests (if PLOTTER_API_KEY is set)."""
+        host = request.headers.get("host", "")
+        if host.startswith("127.0.0.1") or host.startswith("localhost"):
+            return await call_next(request)
+        if API_KEY and request.headers.get("x-api-key") != API_KEY:
+            return JSONResponse({"error": "Unauthorized"}, status_code=401)
+        return await call_next(request)
 
     @api.post("/render")
     def render(req: RenderRequest):
@@ -72,9 +88,39 @@ def _make_app():
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
+    @api.post("/spec")
+    def get_spec(req: RenderRequest):
+        """Return raw Plotly JSON spec without rendering."""
+        try:
+            spec_json = _build_spec(req.chart_type, req.kw)
+            return {"ok": True, "spec_json": spec_json}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
+    @api.get("/chart-types")
+    def chart_types():
+        """List available chart types."""
+        return {
+            "priority": ["bar", "grouped_bar", "line", "scatter"],
+            "all": ["bar", "grouped_bar", "line", "scatter",
+                    "box", "violin", "heatmap", "histogram",
+                    "kaplan_meier", "two_way_anova", "before_after",
+                    "subcolumn_scatter", "curve_fit", "column_stats",
+                    "contingency", "repeated_measures", "chi_square_gof",
+                    "stacked_bar", "bubble", "dot_plot", "bland_altman",
+                    "forest_plot", "area_chart", "raincloud", "qq_plot",
+                    "lollipop", "waterfall", "pyramid", "ecdf"]
+        }
+
     @api.get("/health")
     def health():
         return {"status": "ok"}
+
+    # Serve React SPA static files if the build exists
+    from fastapi.staticfiles import StaticFiles
+    web_dist = os.path.join(os.path.dirname(__file__), "plotter_web", "dist")
+    if os.path.isdir(web_dist):
+        api.mount("/", StaticFiles(directory=web_dist, html=True), name="static")
 
     return api
 

@@ -105,26 +105,52 @@ class PlotterWebView:
         self._ready = threading.Event()
 
     def show(self) -> bool:
-        """Create and embed the webview. Returns True on success."""
+        """Create and embed the webview pointing at the React SPA."""
         try:
             import webview
+            import time
+            import urllib.request
+            import os
 
-            html = _HTML_TEMPLATE.format(PORT=self._port)
+            # Check if React SPA dist/ exists — use it via FastAPI, else inline HTML
+            web_dist = os.path.join(os.path.dirname(__file__), "plotter_web", "dist")
+            use_spa = os.path.isdir(web_dist)
+
+            if use_spa:
+                # Wait for the FastAPI server to be ready
+                for _ in range(10):
+                    try:
+                        urllib.request.urlopen(
+                            f"http://127.0.0.1:{self._port}/health", timeout=1)
+                        break
+                    except Exception:
+                        time.sleep(0.5)
+                url = f"http://127.0.0.1:{self._port}/"
+            else:
+                url = None
 
             def _create():
-                self._window = webview.create_window(
-                    "Claude Plotter Chart",
-                    html=html,
-                    width=800, height=600,
-                    resizable=True,
-                    frameless=False,
-                )
+                if url:
+                    self._window = webview.create_window(
+                        "Claude Plotter",
+                        url=url,
+                        width=900, height=700,
+                        resizable=True,
+                    )
+                else:
+                    html = _HTML_TEMPLATE.format(PORT=self._port)
+                    self._window = webview.create_window(
+                        "Claude Plotter",
+                        html=html,
+                        width=900, height=700,
+                        resizable=True,
+                    )
                 self._ready.set()
                 webview.start()
 
             t = threading.Thread(target=_create, daemon=True)
             t.start()
-            self._ready.wait(timeout=5.0)
+            self._ready.wait(timeout=10.0)
             return self._window is not None
 
         except ImportError:

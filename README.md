@@ -1,10 +1,9 @@
 # Claude Plotter
 
-> A GraphPad Prism-style scientific plotting application for macOS — built entirely by Claude (Anthropic) with Ashwin Pasupathy.
+> A GraphPad Prism-style scientific plotting application — built entirely by Claude (Anthropic) with Ashwin Pasupathy.
 
-![Platform](https://img.shields.io/badge/platform-macOS-lightgrey?logo=apple)
-![Python](https://img.shields.io/badge/python-3.9%2B-blue?logo=python&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-520%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-531%20passing-brightgreen)
+![Python](https://img.shields.io/badge/python-3.12-blue)
 ![Charts](https://img.shields.io/badge/chart%20types-29-orange)
 ![Status](https://img.shields.io/badge/status-active-success)
 
@@ -12,54 +11,62 @@
 
 ## Overview
 
-Claude Plotter is a fully-featured desktop application that brings the familiar workflow of GraphPad Prism to macOS. Load your data from an Excel spreadsheet, choose a chart type, tweak your style parameters, and generate publication-quality figures — all without writing a single line of code.
+Claude Plotter is a fully-featured application that brings the familiar workflow of GraphPad Prism to your desktop or browser. Load your data from an Excel spreadsheet, choose a chart type, tweak your style parameters, and generate publication-quality figures — all without writing a single line of code.
 
-The application is built on Python + Tkinter for the UI, Matplotlib for rendering, and a bespoke `tk.Canvas` live renderer for interactive bar charts that respond to clicks, colour changes, and drag gestures in real time.
+The application runs in two modes:
+- **Desktop**: Python + Tkinter UI with a pywebview panel for interactive Plotly charts
+- **Web**: React SPA + FastAPI backend, deployable anywhere (Docker, cloud, etc.)
+
+Both modes share the same Python business logic and FastAPI server.
+
+---
+
+## Quick Start
+
+```bash
+# Desktop (requires display)
+pip install -r requirements.txt
+python3 plotter_barplot_app.py
+
+# Web server (no display required)
+pip install -r requirements-web.txt
+python3 plotter_web_server.py
+# Open http://localhost:7331
+
+# Docker
+docker build -t claude-plotter .
+docker run -p 7331:7331 claude-plotter
+```
 
 ---
 
 ## Features
 
 - **29 chart types** — from simple bar charts to Kaplan-Meier survival curves and forest plots
+- **Plotly.js interactive charts** — bar, grouped bar, line, and scatter render via Plotly with editable titles and axes
+- **FastAPI backend** — runs as desktop app or standalone web service
+- **React SPA frontend** — Vite + TypeScript + Plotly.js
+- **Docker deployment** — single Dockerfile for production web deployment
 - **Live canvas renderer** — bar and grouped-bar charts render natively on `tk.Canvas` with interactive hit-testing, recolouring, and Y-axis drag
 - **Publication-ready output** — 144 DPI renders, open/closed/floating spine styles, configurable tick directions, gridlines, and font sizes
 - **Statistical overlays** — significance brackets, error bars (SEM, SD, 95% CI), jitter points, and posthoc corrections
 - **Excel-native data model** — paste data directly from Prism, Excel, or Numbers; the app validates your layout before plotting
-- **Multiple file formats** — `.xlsx`, `.xls` for data; `.cplot` project files; `.pzfx` GraphPad import
 - **Style presets** — 5 built-in presets (Classic, Publication, Presentation, Minimal, Dark) + save your own
 - **Session persistence** — settings saved automatically; resume exactly where you left off
 - **Undo/redo** — Cmd+Z / Cmd+Shift+Z for all plot parameter changes
 - **Statistical wiki** — built-in reference for all 29 chart types with formulas and citations
 - **Results panel** — summary statistics, exportable as CSV or copied as TSV for pasting into other apps
-- **Fully modular architecture** — 19 focused Python modules with zero circular dependencies
+- **Fully modular architecture** — 20+ focused Python modules with zero circular dependencies
 
 ---
 
-## Quick Start
+## Supported File Formats
 
-### Requirements
-
-```bash
-pip install matplotlib numpy pandas scipy seaborn openpyxl
-```
-
-Python 3.9 or later is required. A macOS display is required to run the GUI.
-
-### Launch
-
-```bash
-# From the terminal
-python3 plotter_barplot_app.py
-
-# Or double-click PrismBarplot.app in Finder
-# (macOS may prompt you to allow it on first launch)
-```
-
-> **Gatekeeper blocked the app?**
-> Right-click → Open → "Open anyway", or run:
-> ```bash
-> xattr -cr PrismBarplot.app
-> ```
+| Format | Read | Write |
+|--------|------|-------|
+| .xlsx / .xls | Yes | — |
+| .cplot (Claude Plotter project) | Yes | Yes |
+| .pzfx (GraphPad Prism) | Yes (import) | — |
 
 ---
 
@@ -71,7 +78,7 @@ Claude Plotter supports 29 chart types across a wide range of scientific use cas
 
 | Chart | Description |
 |---|---|
-| **Bar Chart** | Mean ± error bar per group; supports SEM, SD, 95% CI |
+| **Bar Chart** | Mean +/- error bar per group; supports SEM, SD, 95% CI |
 | **Grouped Bar** | Side-by-side bars for two-factor designs |
 | **Stacked Bar** | Proportional or absolute stacked bars |
 | **Box Plot** | Median, IQR, whiskers, and outlier points |
@@ -145,11 +152,17 @@ The app validates your spreadsheet layout before plotting and shows specific err
 
 ## Architecture
 
-Claude Plotter is split into 19 focused modules with no circular dependencies.
+```
+Desktop mode:   Tk shell -> pywebview -> React SPA -> FastAPI (127.0.0.1:7331)
+Web mode:       Browser -> React SPA -> FastAPI (0.0.0.0:7331)
+Both modes:     same Python business logic, same FastAPI server
+```
+
+Claude Plotter is split into 20+ focused modules with no circular dependencies.
 
 ```
 # Core
-plotter_barplot_app.py      6,637 lines   App class, sidebar, all UI
+plotter_barplot_app.py      6,688 lines   App class, sidebar, all UI
 plotter_functions.py        6,553 lines   29 Matplotlib chart functions
 plotter_widgets.py            952 lines   Design-system tokens, PButton/PEntry/etc.
 plotter_validators.py         518 lines   Standalone spreadsheet validators
@@ -170,58 +183,43 @@ plotter_project.py            207 lines   .cplot project files (ZIP)
 plotter_import_pzfx.py        316 lines   GraphPad .pzfx importer
 plotter_wiki_content.py     2,224 lines   Statistical wiki content
 plotter_app_wiki.py           522 lines   Wiki popup viewer
-```
 
-### Rendering pipeline
+# Phase 3 — Plotly/FastAPI
+plotter_server.py                         FastAPI server + auth middleware
+plotter_webview.py                        pywebview wrapper for React SPA
+plotter_plotly_theme.py                   Plotly theme matching Prism style
+plotter_spec_bar.py                       Bar chart Plotly spec builder
+plotter_spec_grouped_bar.py               Grouped bar Plotly spec builder
+plotter_spec_line.py                      Line graph Plotly spec builder
+plotter_spec_scatter.py                   Scatter plot Plotly spec builder
 
-```
-User clicks "Generate Plot"
-        │
-        ▼
-App._do_run()  [background thread]
-  calls plotter_functions.prism_<chart_type>(**kwargs)
-  returns (fig, ax)
-        │
-        ▼
-App._embed_plot()  [main thread, via after(0)]
-  ┌─ canvas mode + bar/grouped_bar? ──────────────────────────────┐
-  │  YES → App._try_canvas_embed()                                │
-  │         builds BarScene / GroupedBarScene                     │
-  │         CanvasRenderer / GroupedCanvasRenderer                │
-  │         live hit-test, recolour, Y-drag, bar-width drag       │
-  └─ NO  → FigureCanvasTkAgg(fig)  (standard Agg path)  ─────────┘
-```
-
-### Dependency graph
-
-```
-plotter_barplot_app.py
-  ├── plotter_widgets.py          (pure Tk + constants — no prism deps)
-  ├── plotter_validators.py       (pure pandas — no prism deps)
-  ├── plotter_results.py          (accepts app object; no other prism imports)
-  ├── plotter_functions.py        (numpy / pandas / matplotlib / scipy — lazy)
-  └── plotter_canvas_renderer.py  (numpy / pandas — no matplotlib)
+# Phase 4 — Deployment
+plotter_web_server.py                     Standalone web server (no Tk)
+plotter_web/                              React SPA (Vite + TypeScript + Plotly.js)
+Dockerfile                                Docker deployment config
 ```
 
 ---
 
 ## Test Suite
 
-520 tests across 6 suites, running in ~3 minutes on a modern Mac.
+531 tests across 7 suites.
 
 ```bash
 # Run everything
 python3 run_all.py
 
 # Run a specific suite
-python3 run_all.py comprehensive      # 309 tests — all chart types + stats engine
-python3 run_all.py canvas_renderer    #  80 tests — tk.Canvas renderer
+python3 run_all.py comprehensive      # 175 tests — all chart types + stats engine
+python3 run_all.py canvas_renderer    # 109 tests — tk.Canvas renderer
 python3 run_all.py modular            #  74 tests — widgets / validators / results / tabs
-python3 run_all.py p1p2p3             #  37 tests — style parameter regressions
+python3 run_all.py p1p2p3             #  60 tests — style parameter regressions
 python3 run_all.py control            #  20 tests — control-group statistics
+python3 run_all.py phase3             #  82 tests — Plotly spec builders + theme
+python3 run_all.py server             #  11 tests — FastAPI server endpoints
 ```
 
-All 520 tests must pass before any commit. If tests regress, fix them before doing anything else.
+All tests must pass before any commit.
 
 ---
 
@@ -230,20 +228,8 @@ All 520 tests must pass before any commit. If tests regress, fix them before doi
 ### Quick syntax check
 
 ```bash
-python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plotter_results, plotter_registry, plotter_tabs, plotter_app_icons, plotter_presets, plotter_session, plotter_events, plotter_types, plotter_undo, plotter_errors, plotter_comparisons, plotter_project, plotter_import_pzfx, plotter_wiki_content, plotter_app_wiki; print('OK')"
+python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plotter_results, plotter_registry, plotter_tabs, plotter_app_icons, plotter_presets, plotter_session, plotter_events, plotter_types, plotter_undo, plotter_errors, plotter_comparisons, plotter_project, plotter_import_pzfx, plotter_wiki_content, plotter_app_wiki, plotter_server, plotter_web_server; print('OK')"
 ```
-
-### Adding a new chart type
-
-The process follows a five-step checklist:
-
-1. **Write the plot function** in `plotter_functions.py`
-2. **Register it** in `_REGISTRY_SPECS` inside `plotter_barplot_app.py`
-3. **Add UI controls** (if the chart needs custom options beyond the standard tabs)
-4. **Add a validator** in `plotter_validators.py`
-5. **Write tests** in `test_comprehensive.py`
-
-See `CLAUDE.md` for the full detailed checklist with code templates.
 
 ### Commit conventions
 

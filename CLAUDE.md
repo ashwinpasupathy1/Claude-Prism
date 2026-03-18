@@ -8,7 +8,7 @@ Built entirely by Claude (Anthropic) with Ashwin Pasupathy.
 ## The one rule before every commit
 
 ```bash
-python3 run_all.py   # must print 520/520 (or higher) with 0 failures
+python3 run_all.py   # must print 438/438 (or higher) with 0 failures
 ```
 
 Never commit if this fails. Never skip it. If tests regress, fix them before
@@ -19,14 +19,14 @@ doing anything else.
 ## Commands
 
 ```bash
-# Run the full test suite (520 tests across 6 suites, ~120 seconds)
+# Run the full test suite (438 tests across 6 suites, ~120 seconds)
 python3 run_all.py
 
 # Run a single suite
-python3 run_all.py comprehensive      # 309 tests — all chart types + stats engine
-python3 run_all.py canvas_renderer    #  80 tests — tk.Canvas renderer
+python3 run_all.py comprehensive      # 175 tests — all chart types + stats engine
+python3 run_all.py canvas_renderer    #  109 tests — tk.Canvas renderer
 python3 run_all.py modular            #  74 tests — widgets/validators/results/tabs
-python3 run_all.py p1p2p3             #  37 tests — style params
+python3 run_all.py p1p2p3             #  60 tests — style params
 python3 run_all.py control            #  20 tests — control-group logic
 
 # Launch the app (needs a display — use xvfb-run on headless systems)
@@ -43,7 +43,7 @@ python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plott
 
 ```
 # ── Core application ──────────────────────────────────────────────
-plotter_barplot_app.py      6,637 lines   App class, PLOT_REGISTRY, icon helpers
+plotter_barplot_app.py      6,688 lines   App class, PLOT_REGISTRY, icon helpers
 plotter_functions.py        6,553 lines   29+ matplotlib chart functions
 plotter_widgets.py            952 lines   _DS tokens, PButton/PEntry/PCheckbox etc.
 plotter_validators.py         518 lines   Standalone spreadsheet validators
@@ -67,7 +67,7 @@ plotter_app_wiki.py           522 lines   Wiki popup viewer (Tk UI)
 
 # ── Test infrastructure ────────────────────────────────────────────
 plotter_test_harness.py       363 lines   Shared test bootstrap (imports once)
-run_all.py                    111 lines   6-suite unified test runner
+run_all.py                    112 lines   6-suite unified test runner
 tests/test_comprehensive.py 1,341 lines   Main chart function tests
 tests/test_canvas_renderer.py 1,306 lines  Canvas renderer + GroupedCanvasRenderer
 tests/test_modular.py         599 lines   Widgets / validators / results / tabs
@@ -258,7 +258,7 @@ Add a test section to `test_comprehensive.py` following the existing pattern.
 At minimum: one test that renders without crashing, one that checks a specific
 visual property, one that tests the validator.
 
-Run `python3 run_all.py` — all existing 520 tests must still pass.
+Run `python3 run_all.py` — all existing 438 tests must still pass.
 
 ---
 
@@ -488,7 +488,7 @@ Always run `python3 run_all.py` and confirm 0 failures before pushing.
 ## Phase 2 Changes (March 2026)
 
 Phase 2 added 14 new modules and significant new features while maintaining full
-backward compatibility. All 520 tests pass.
+backward compatibility. All 438 tests pass.
 
 ### New infrastructure modules
 
@@ -545,3 +545,48 @@ backward compatibility. All 520 tests pass.
 15. **`plotter_registry.py` is the canonical source** for `PlotTypeConfig` entries.
     `plotter_barplot_app.py` imports the registry; do not add new chart types
     directly to `plotter_barplot_app.py`.
+
+## Phase 4 — Deployment Readiness
+
+### New files
+| File | Purpose |
+|---|---|
+| `plotter_web_server.py` | Standalone web server entry point (no Tk) |
+| `Dockerfile` | Docker deployment config |
+| `requirements.txt` | Desktop dependencies |
+| `requirements-web.txt` | Web server dependencies (no Tk/matplotlib) |
+| `plotter_web/` | React SPA (Vite + TypeScript + Plotly.js) |
+
+### Running as a web service
+```bash
+# Local development
+python3 plotter_web_server.py
+
+# With Docker
+docker build -t claude-plotter .
+docker run -p 7331:7331 claude-plotter
+
+# With API key authentication
+PLOTTER_API_KEY=your-secret python3 plotter_web_server.py
+```
+
+### Architecture
+```
+Desktop mode:   Tk shell -> pywebview -> React SPA -> FastAPI (127.0.0.1:7331)
+Web mode:       Browser -> React SPA -> FastAPI (0.0.0.0:7331)
+Both modes:     same Python business logic, same FastAPI server
+```
+
+### Phase 4 gotchas
+
+16. **pywebview on headless servers** — pywebview requires a display.
+    Use `plotter_web_server.py` (no Tk, no pywebview) for headless deployment.
+
+17. **React SPA build** — Run `cd plotter_web && npm install && npm run build`
+    before deployment. The dist/ directory must exist for static file serving.
+
+18. **CORS** — FastAPI allows all origins by default. In production, restrict
+    `allow_origins` in plotter_server.py to your domain.
+
+19. **API key** — Set `PLOTTER_API_KEY` env var for non-local request auth.
+    Local requests (127.0.0.1 / localhost) always bypass auth.
