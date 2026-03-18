@@ -895,6 +895,30 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
         self.config(menu=menubar)
 
+        # ── Chart-type keyboard shortcuts: ⌘1–⌘9 ─────────────────────────────
+        try:
+            from plotter_registry import KEYBOARD_SHORTCUTS, _REGISTRY_SPECS
+            _key_to_idx = {spec.key: i for i, spec in enumerate(_REGISTRY_SPECS)}
+            for num, chart_key in KEYBOARD_SHORTCUTS.items():
+                idx = _key_to_idx.get(chart_key)
+                if idx is not None:
+                    self.bind_all(f"<Command-Key-{num}>",
+                                  lambda e, i=idx: self._jump_to_chart(i))
+                    self.bind_all(f"<Control-Key-{num}>",
+                                  lambda e, i=idx: self._jump_to_chart(i))
+        except Exception:
+            pass
+
+    def _jump_to_chart(self, idx: int):
+        """Switch to chart type by registry index (used by ⌘1–⌘9)."""
+        try:
+            if hasattr(self, "_sb_select"):
+                self._sb_select(idx)
+            if hasattr(self, "_sb_show_pane"):
+                self._sb_show_pane(idx)
+        except Exception:
+            pass
+
     def _build_toolbar(self):
         """Build the bottom status/button bar.
 
