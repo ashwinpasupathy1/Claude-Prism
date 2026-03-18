@@ -29,6 +29,7 @@ SUITES = {
     "canvas_renderer": "test_canvas_renderer",
     "modular":         "test_modular",
     "stats_verify":    "test_stats_verification",
+    "phase3_plotly":   "test_phase3_plotly",
 }
 
 

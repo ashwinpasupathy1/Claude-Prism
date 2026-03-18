@@ -1,13 +1,12 @@
 """FastAPI server for Claude Plotter — serves Plotly chart specs
 and receives edit events from the pywebview frontend."""
 
-from __future__ import annotations
 import json
 import threading
-from typing import Any
+from typing import Any, Optional
 
-_server_thread: threading.Thread | None = None
-_app_ref = None  # weakref to the App instance, set during startup
+_server_thread: Optional[threading.Thread] = None
+_app_ref = None  # reference to the App instance, set during startup
 _PORT = 7331
 
 
@@ -37,15 +36,6 @@ def _make_app():
     from fastapi.middleware.cors import CORSMiddleware
     from pydantic import BaseModel
 
-    api = FastAPI(title="Claude Plotter API", version="1.0.0")
-
-    api.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
     class RenderRequest(BaseModel):
         chart_type: str
         kw: dict[str, Any]
@@ -54,6 +44,15 @@ def _make_app():
         event: str
         value: Any = None
         extra: dict[str, Any] = {}
+
+    api = FastAPI(title="Claude Plotter API", version="1.0.0")
+
+    api.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @api.post("/render")
     def render(req: RenderRequest):
