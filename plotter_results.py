@@ -1,6 +1,6 @@
 """
-prism_results.py
-================
+plotter_results.py
+==================
 Results panel logic for Spectra — decoupled from the App class.
 
 The three public functions receive the ``app`` object (an App instance)
@@ -379,7 +379,7 @@ def export_results_csv(app):
         title="Save Results as CSV",
         defaultextension=".csv",
         filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
-        initialfile="prism_results.csv"
+        initialfile="spectra_results.csv"
     )
     if not path:
         return

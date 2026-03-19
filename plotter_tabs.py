@@ -1,6 +1,6 @@
 """
-prism_tabs.py
-=============
+plotter_tabs.py
+===============
 Tab system for Spectra.
 
 Three classes:

@@ -1,6 +1,6 @@
 """
-prism_validators.py
-===================
+plotter_validators.py
+=====================
 Standalone spreadsheet validation functions for Spectra.
 
 Each validate_* function accepts a raw pandas DataFrame (read with

@@ -3457,7 +3457,7 @@ def plotter_two_way_anova(
             ax.bar(xi, m, width=bar_width * 0.9,
                    color=c, edgecolor=_darken_color(c),
                    linewidth=0.8, zorder=3)
-            _draw_bar_errorbar(ax, xi, cell_data, error, yscale, cap_size=4.0)
+            _draw_bar_errorbar(ax, xi, cell_data, error, yscale, cap_size=cap_size)
             bar_tops[(a_val, b_val)] = m + err
 
             if show_points and len(cell_data) > 0:

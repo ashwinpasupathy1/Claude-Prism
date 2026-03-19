@@ -50,7 +50,7 @@ try:
         PAD,
     )
 except ImportError as _e:
-    print(f"[prism] warning: prism_widgets not found ({_e})")
+    print(f"[spectra] warning: plotter_widgets not found ({_e})")
 
 try:
     from plotter_validators import (
@@ -61,14 +61,14 @@ try:
     )
     _VALIDATORS_AVAILABLE = True
 except ImportError as _e:
-    print(f"[prism] warning: prism_validators not found ({_e})")
+    print(f"[spectra] warning: plotter_validators not found ({_e})")
     _VALIDATORS_AVAILABLE = False
 
 try:
     from plotter_results import populate_results, export_results_csv, copy_results_tsv
     _RESULTS_AVAILABLE = True
 except ImportError as _e:
-    print(f"[prism] warning: prism_results not found ({_e})")
+    print(f"[spectra] warning: plotter_results not found ({_e})")
     _RESULTS_AVAILABLE = False
 
 try:
@@ -174,7 +174,7 @@ def _lbl(parent, row, key, font_size=13):
 
 
 # ---------------------------------------------------------------------------
-# Plot type registry  -  edit prism_registry.py to add new chart types
+# Plot type registry  -  edit plotter_registry.py to add new chart types
 # ---------------------------------------------------------------------------
 
 from plotter_registry import (
@@ -1752,14 +1752,11 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             lbl.pack(anchor="w", padx=28, pady=(0, 4))
 
         def plotter_link(page_slug, link_text):
-            """Clickable hyperlink to a statistics reference page."""
-            import webbrowser
-            url = f"https://www.graphpad.com/guides/prism/latest/statistics/{page_slug}"
+            """Reference label (non-clickable) for statistics documentation."""
             lbl = tk.Label(frame, text=f"📎 {link_text}",
-                           font=("Helvetica Neue", 11, "underline"),
-                           fg="#2274A5", bg="white", cursor="hand2")
+                           font=("Helvetica Neue", 11),
+                           fg="#6B7280", bg="white")
             lbl.pack(anchor="w", padx=28, pady=(0, 6))
-            lbl.bind("<Button-1>", lambda e: webbrowser.open(url))
 
         def scipy_entry(fn, label_text, use_sections=("Notes",)):
             import inspect, re
@@ -6421,19 +6418,19 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             self._results_visible = True
 
     def _populate_results(self, excel_path, sheet, plot_type, kw_snapshot):
-        """Delegate to the standalone populate_results() in prism_results.py."""
+        """Delegate to the standalone populate_results() in plotter_results.py."""
         if _RESULTS_AVAILABLE:
             populate_results(self, excel_path, sheet, plot_type, kw_snapshot)
 
     def _export_results_csv(self):
-        """Delegate to the standalone export_results_csv() in prism_results.py."""
+        """Delegate to the standalone export_results_csv() in plotter_results.py."""
         if _RESULTS_AVAILABLE:
             export_results_csv(self)
         else:
             self._set_status("Results module not available.", err=True)
 
     def _copy_results_tsv(self):
-        """Delegate to the standalone copy_results_tsv() in prism_results.py."""
+        """Delegate to the standalone copy_results_tsv() in plotter_results.py."""
         if _RESULTS_AVAILABLE:
             copy_results_tsv(self)
 
