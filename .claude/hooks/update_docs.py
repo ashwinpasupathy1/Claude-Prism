@@ -2,7 +2,7 @@
 """
 update_docs.py
 ==============
-SessionStart hook for Spectra.
+SessionStart hook for Refraction.
 Runs once at the start of each new session to refresh README.md and CLAUDE.md
 with current file line counts and registered chart type counts.
 
@@ -246,7 +246,7 @@ def main():
     readme_updated = readme_updated or readme_tests_updated
 
     # Output goes into Claude's session context
-    print("=== Spectra — session context ===")
+    print("=== Refraction — session context ===")
     print(f"Charts registered in sidebar: {n_charts}")
     print(f"Test registrations (run() calls): {total_tests}")
     print("  " + "  ".join(f"{k}={v}" for k, v in suite_counts.items()))

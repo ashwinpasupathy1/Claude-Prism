@@ -1,7 +1,7 @@
 """
 plotter_wiki_content.py
 =======================
-Statistical reference content for Spectra wiki.
+Statistical reference content for Refraction wiki.
 All formulas use matplotlib mathtext syntax.
 Citations reference section-level locations only.
 """
@@ -1325,7 +1325,7 @@ WIKI_SECTIONS = [
                     "• The data distribution is clearly non-normal and non-parametric "
                     "rank tests are not appropriate (e.g., complex multivariate statistics).\n"
                     "• You want an exact test without distributional assumptions.\n\n"
-                    "Spectra uses permutation tests as an alternative to "
+                    "Refraction uses permutation tests as an alternative to "
                     "parametric tests in the statistics panel."
                 ),
             },
@@ -2073,7 +2073,7 @@ WIKI_SECTIONS = [
                 ],
             },
             {
-                "heading": "Recommendation hierarchy for Spectra users",
+                "heading": "Recommendation hierarchy for Refraction users",
                 "type": "numbered_list",
                 "items": [
                     (

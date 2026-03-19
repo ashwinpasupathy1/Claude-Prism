@@ -1,4 +1,4 @@
-# Spectra
+# Refraction
 
 > A publication-quality scientific plotting application for macOS — built entirely by Claude (Anthropic) with Ashwin Pasupathy.
 
@@ -10,7 +10,7 @@
 
 ---
 
-![Spectra screenshot](assets/screenshot.png)
+![Refraction screenshot](assets/screenshot.png)
 
 <!-- Screenshot placeholder — will be filled in with an actual app screenshot -->
 
@@ -18,7 +18,7 @@
 
 ## Overview
 
-Spectra is a fully-featured scientific plotting application for macOS. Load your data from an Excel spreadsheet, choose a chart type, tweak your style parameters, and generate publication-quality figures — all without writing a single line of code.
+Refraction is a fully-featured scientific plotting application for macOS. Load your data from an Excel spreadsheet, choose a chart type, tweak your style parameters, and generate publication-quality figures — all without writing a single line of code.
 
 The application runs in two modes:
 - **Desktop**: Python + Tkinter UI with a pywebview panel for interactive Plotly charts
@@ -43,8 +43,8 @@ python3 plotter_web_server.py
 # Open http://localhost:7331
 
 # Docker
-docker build -t spectra .
-docker run -p 7331:7331 spectra
+docker build -t refraction .
+docker run -p 7331:7331 refraction
 ```
 
 ---
@@ -74,14 +74,14 @@ docker run -p 7331:7331 spectra
 | Format | Read | Write |
 |--------|------|-------|
 | .xlsx / .xls | Yes | — |
-| .cplot (Spectra Project) | Yes | Yes |
+| .cplot (Refraction Project) | Yes | Yes |
 | .pzfx (Prism format) | Yes (import) | — |
 
 ---
 
 ## Chart Types
 
-Spectra supports **29 chart types** across a wide range of scientific use cases.
+Refraction supports **29 chart types** across a wide range of scientific use cases.
 
 ### Categorical / Distribution
 
@@ -167,7 +167,7 @@ Web mode:       Browser -> React SPA -> FastAPI (0.0.0.0:7331)
 Both modes:     same Python business logic, same FastAPI server
 ```
 
-Spectra is split into 30+ focused Python modules (~27,300 lines) with no circular dependencies.
+Refraction is split into 30+ focused Python modules (~27,300 lines) with no circular dependencies.
 
 ```
 # Core application

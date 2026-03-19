@@ -3105,7 +3105,7 @@ def plotter_heatmap(
         "Mako":               "mako",
         "Plasma":             "plasma",
         "Coolwarm":           "coolwarm",
-        "Spectral":           "Spectral_r",
+        "Refractionl":           "Refractionl_r",
         "YlOrRd":             "YlOrRd",
         "Blues":              "Blues",
         "Greens":             "Greens",
@@ -6485,7 +6485,7 @@ def export_all_charts_pdf(output_path: str, excel_path: str,
         # Cover page
         fig_cover, ax_cover = plt.subplots(figsize=figsize, dpi=_DPI)
         ax_cover.axis("off")
-        ax_cover.text(0.5, 0.60, "Spectra", transform=ax_cover.transAxes,
+        ax_cover.text(0.5, 0.60, "Refraction", transform=ax_cover.transAxes,
                       ha="center", va="center", fontsize=28, fontweight="bold",
                       fontfamily=_get_font(), color="#2274A5")
         ax_cover.text(0.5, 0.48, "Chart Type Showcase", transform=ax_cover.transAxes,
@@ -6545,7 +6545,7 @@ def export_all_charts_pdf(output_path: str, excel_path: str,
 
         # PDF metadata
         d = pdf.infodict()
-        d["Title"] = "Spectra — Chart Showcase"
+        d["Title"] = "Refraction — Chart Showcase"
         d["Author"] = "Claude (Anthropic) / Ashwin Pasupathy"
         d["Subject"] = "Publication-quality scientific charts"
 

@@ -1,7 +1,7 @@
 """
 prism_registry.py
 =================
-Chart-type registry for Spectra.
+Chart-type registry for Refraction.
 
 Contains:
 - PlotTypeConfig  — dataclass describing one chart type's UI contract

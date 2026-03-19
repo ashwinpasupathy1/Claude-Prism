@@ -1,9 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec file for Spectra
+# PyInstaller spec file for Refraction
 # Targets macOS .app bundle with bundled React SPA
 #
 # Usage:
-#   pyinstaller spectra.spec
+#   pyinstaller refraction.spec
 #
 # Prerequisites:
 #   pip install pyinstaller
@@ -191,7 +191,7 @@ exe = EXE(  # noqa: F821
     a.scripts,
     [],
     exclude_binaries=True,   # binaries go into COLLECT / .app bundle
-    name="Spectra",
+    name="Refraction",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -209,19 +209,19 @@ coll = COLLECT(  # noqa: F821
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="Spectra",
+    name="Refraction",
 )
 
 # ── macOS .app bundle ─────────────────────────────────────────────────────────
 app = BUNDLE(  # noqa: F821
     coll,
-    name="Spectra.app",
+    name="Refraction.app",
     icon=ICON_PATH if os.path.exists(ICON_PATH) else None,
-    bundle_identifier="com.spectra.app",
+    bundle_identifier="com.refraction.app",
     info_plist={
         # Display name shown in Finder and Dock
-        "CFBundleName": "Spectra",
-        "CFBundleDisplayName": "Spectra",
+        "CFBundleName": "Refraction",
+        "CFBundleDisplayName": "Refraction",
         # Version / build strings
         "CFBundleVersion": "1.0.0",
         "CFBundleShortVersionString": "1.0.0",
@@ -245,8 +245,8 @@ app = BUNDLE(  # noqa: F821
         # Document types handled (optional — .cplot project files)
         "CFBundleDocumentTypes": [
             {
-                "CFBundleTypeName": "Spectra Project",
-                "CFBundleTypeExtensions": ["cplot", "spectra"],
+                "CFBundleTypeName": "Refraction Project",
+                "CFBundleTypeExtensions": ["cplot", "refraction"],
                 "CFBundleTypeRole": "Editor",
                 "LSHandlerRank": "Owner",
             },

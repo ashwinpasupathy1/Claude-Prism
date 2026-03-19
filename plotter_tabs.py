@@ -1,7 +1,7 @@
 """
 plotter_tabs.py
 ===============
-Tab system for Spectra.
+Tab system for Refraction.
 
 Three classes:
   TabState    — dataclass holding per-tab identity and form state

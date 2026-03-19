@@ -1,4 +1,4 @@
-"""plotter_events.py — Lightweight publish/subscribe event bus for Spectra."""
+"""plotter_events.py — Lightweight publish/subscribe event bus for Refraction."""
 
 import collections
 import logging

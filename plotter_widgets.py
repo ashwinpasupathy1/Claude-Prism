@@ -2,7 +2,7 @@
 plotter_widgets.py
 ==================
 Design-system tokens, custom Tkinter widget classes, and shared UI helpers
-for Spectra.
+for Refraction.
 
 Everything in this module is *display-only* — no plot logic, no file I/O,
 no scientific computation.  Import it from ``plotter_barplot_app`` so that

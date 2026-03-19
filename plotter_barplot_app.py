@@ -2,7 +2,7 @@
 """
 plotter_barplot_app.py
 ======================
-Spectra -- main application window (macOS, tabbed ttk layout).
+Refraction -- main application window (macOS, tabbed ttk layout).
 
 Module structure
 ----------------
@@ -50,7 +50,7 @@ try:
         PAD,
     )
 except ImportError as _e:
-    print(f"[spectra] warning: plotter_widgets not found ({_e})")
+    print(f"[refraction] warning: plotter_widgets not found ({_e})")
 
 try:
     from plotter_validators import (
@@ -61,14 +61,14 @@ try:
     )
     _VALIDATORS_AVAILABLE = True
 except ImportError as _e:
-    print(f"[spectra] warning: plotter_validators not found ({_e})")
+    print(f"[refraction] warning: plotter_validators not found ({_e})")
     _VALIDATORS_AVAILABLE = False
 
 try:
     from plotter_results import populate_results, export_results_csv, copy_results_tsv
     _RESULTS_AVAILABLE = True
 except ImportError as _e:
-    print(f"[spectra] warning: plotter_results not found ({_e})")
+    print(f"[refraction] warning: plotter_results not found ({_e})")
     _RESULTS_AVAILABLE = False
 
 try:
@@ -285,7 +285,7 @@ _VAR_DEFAULTS: dict = {
 }
 
 
-PREFS_PATH = os.path.expanduser("~/Library/Preferences/spectra.json")
+PREFS_PATH = os.path.expanduser("~/Library/Preferences/refraction.json")
 
 def _load_prefs():
     try:
@@ -381,7 +381,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         super().__init__()
         # Hide window during build to avoid visible resize animation
         self.withdraw()
-        self.title("Spectra")
+        self.title("Refraction")
         self.resizable(True, True)
         self._pf              = None
         self._pf_ready        = False
@@ -912,7 +912,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         help_menu.add_command(label="Help Analyze…",
                               command=self._help_analyze)
         help_menu.add_separator()
-        help_menu.add_command(label="About Spectra",
+        help_menu.add_command(label="About Refraction",
                               command=self._show_about)
         menubar.add_cascade(label="Help", menu=help_menu)
 
@@ -1901,7 +1901,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         scipy_entry(_st.levene, "levene")
         body("Prism 11 uses Brown-Forsythe and Bartlett's tests for homoscedasticity, "
              "not Levene's. Brown-Forsythe (median-centred) is more robust to non-normality. "
-             "Spectra uses Levene's as an equivalent diagnostic.")
+             "Refraction uses Levene's as an equivalent diagnostic.")
         plotter_link("stat_checklist_1wayanova.htm",
                    "Prism 11: Equal variance assumption (Brown-Forsythe / Bartlett)")
 
@@ -1919,7 +1919,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         tag("η² = SS_effect / SS_total", "#6B4226")
         body("Proportion of total variance explained by a factor. η² = 0.01: small, "
              "0.06: medium, 0.14: large (Cohen). For one-way ANOVA η² = partial η². "
-             "For two-way ANOVA Spectra reports partial η² (effect SS / (effect SS + error SS)).")
+             "For two-way ANOVA Refraction reports partial η² (effect SS / (effect SS + error SS)).")
         plotter_link("stat_options_tab_one-way_anova.htm",
                    "Prism 11: Eta squared and omega squared")
 
@@ -3225,7 +3225,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
         desktop = os.path.join(os.path.expanduser("~"), "Desktop")
         ts      = datetime.now().strftime("%Y%m%d_%H%M%S")
-        fname   = f"spectra_template_{mode}_{ts}.xlsx"
+        fname   = f"refraction_template_{mode}_{ts}.xlsx"
         path    = os.path.join(desktop, fname)
 
         wb = openpyxl.Workbook()
@@ -4483,7 +4483,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         _hm_color_cb = PCombobox(
             g, textvariable=self._vars["color"],
             values=["Default (Blue-Red)", "Viridis", "Mako", "Plasma",
-                    "Coolwarm", "Spectral", "YlOrRd", "Blues", "Greens", "RdYlGn"],
+                    "Coolwarm", "Refractionl", "YlOrRd", "Blues", "Greens", "RdYlGn"],
             state="readonly", width=22, font=("Helvetica Neue", 12))
         _hm_color_cb.grid(row=r, column=0, sticky="w", padx=PAD, pady=4); r += 1
         add_placeholder(_hm_color_cb, self._vars["color"], "Default (Blue-Red)")
@@ -4685,7 +4685,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 reasoning.append(("ℹ", "Multiple conditions, same subjects. Prism 11 uses "
                                    "repeated-measures one-way ANOVA with optional "
                                    "Geisser-Greenhouse correction for non-sphericity. "
-                                   "Spectra uses pairwise paired t-tests with "
+                                   "Refraction uses pairwise paired t-tests with "
                                    "Holm correction as a robust equivalent."))
             else:
                 test, rec_title = "Non-parametric", "Friedman test + Dunn's post-hoc (Holm corrected)"
@@ -6503,11 +6503,11 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         src_path  = self._vars.get("excel_path", tk.StringVar()).get().strip()
         if title_str:
             safe = "".join(c if c.isalnum() or c in " _-" else "_" for c in title_str).strip()
-            default_name = safe[:60] or "spectra"
+            default_name = safe[:60] or "refraction"
         elif src_path:
             default_name = os.path.splitext(os.path.basename(src_path))[0][:60]
         else:
-            default_name = f"spectra_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            default_name = f"refraction_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         path = filedialog.asksaveasfilename(
             initialdir=desktop, initialfile=f"{default_name}.png",
             defaultextension=".png",
@@ -6571,8 +6571,8 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         """About dialog."""
         from tkinter import messagebox
         messagebox.showinfo(
-            "About Spectra",
-            "Spectra\n\n"
+            "About Refraction",
+            "Refraction\n\n"
             "A publication-quality scientific plotting application.\n\n"
             "Designed and implemented by Claude (Anthropic).\n"
             "Commissioned by Ashwin Pasupathy.\n\n"
@@ -6596,7 +6596,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             title="Save Chart Showcase PDF",
             defaultextension=".pdf",
             filetypes=[("PDF", "*.pdf")],
-            initialfile="spectra_showcase.pdf"
+            initialfile="refraction_showcase.pdf"
         )
         if not out_path:
             return
@@ -6628,7 +6628,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         path = filedialog.asksaveasfilename(
             title="Save Project",
             defaultextension=".cplot",
-            filetypes=[("Spectra Project", "*.cplot"), ("All files", "*.*")],
+            filetypes=[("Refraction Project", "*.cplot"), ("All files", "*.*")],
         )
         if not path:
             return
@@ -6673,7 +6673,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
         path = filedialog.askopenfilename(
             title="Open Project",
-            filetypes=[("Spectra Project", "*.cplot"), ("All files", "*.*")],
+            filetypes=[("Refraction Project", "*.cplot"), ("All files", "*.*")],
         )
         if not path:
             return

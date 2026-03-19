@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-generate_spectra_logos.py — Spectra macOS app icon generator
+generate_refraction_logos.py — Refraction macOS app icon generator
 
 Generates three icon variants:
-  assets/logo_spectra_bars.png   — Spectrum bar chart (recommended)
-  assets/logo_spectra_prism.png  — Prism dispersing light
+  assets/logo_refraction_bars.png   — Spectrum bar chart (recommended)
+  assets/logo_refraction_prism.png  — Prism dispersing light
   assets/icon.png                — Overwrites the active app icon (bars variant)
   assets/AppIcon.icns            — macOS .icns bundle (bars variant, macOS only)
 
@@ -221,12 +221,12 @@ def main():
         sys.exit("ERROR: Pillow is required.\nInstall with:  pip install Pillow\n")
 
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
-    print("Spectra — logo generator\n")
+    print("Refraction — logo generator\n")
 
     # Logo A: Spectrum Bars (used as the active app icon)
     print("[1] Generating spectrum-bars icon…")
     bars_img = generate_bars(SIZE)
-    bars_path = ASSETS_DIR / "logo_spectra_bars.png"
+    bars_path = ASSETS_DIR / "logo_refraction_bars.png"
     bars_img.save(bars_path, "PNG")
     print(f"  Saved {bars_path}")
 
@@ -238,7 +238,7 @@ def main():
     # Logo B: Prism
     print("\n[2] Generating prism icon…")
     prism_img  = generate_prism(SIZE)
-    prism_path = ASSETS_DIR / "logo_spectra_prism.png"
+    prism_path = ASSETS_DIR / "logo_refraction_prism.png"
     prism_img.save(prism_path, "PNG")
     print(f"  Saved {prism_path}")
 
@@ -247,13 +247,13 @@ def main():
     generate_icns(active_png, ASSETS_DIR / "AppIcon.icns")
 
     print("\nDone. Preview all variants:\n"
-          f"  {ASSETS_DIR}/logo_spectra_bars.png\n"
-          f"  {ASSETS_DIR}/logo_spectra_prism.png\n"
+          f"  {ASSETS_DIR}/logo_refraction_bars.png\n"
+          f"  {ASSETS_DIR}/logo_refraction_prism.png\n"
           f"  {ASSETS_DIR}/AppIcon.icns\n\n"
           "SVG sources (editable in Figma/Sketch/Inkscape):\n"
-          f"  {ASSETS_DIR}/logo_spectra_bars.svg\n"
-          f"  {ASSETS_DIR}/logo_spectra_prism.svg\n"
-          f"  {ASSETS_DIR}/logo_spectra_s.svg\n")
+          f"  {ASSETS_DIR}/logo_refraction_bars.svg\n"
+          f"  {ASSETS_DIR}/logo_refraction_prism.svg\n"
+          f"  {ASSETS_DIR}/logo_refraction_s.svg\n")
 
 
 if __name__ == "__main__":
