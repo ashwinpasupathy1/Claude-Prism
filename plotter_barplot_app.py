@@ -386,6 +386,10 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         self._pf              = None
         self._pf_ready        = False
         self._running         = False
+        # Excel parse cache — keyed by (path, sheet); avoids re-reading the
+        # same file on consecutive renders (e.g. changing only style options).
+        self._parse_cache_key = None
+        self._parse_cache_df  = None
         self._vars            = {}
         self._file_selected   = False
         self._validated       = False
@@ -488,16 +492,16 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             self.iconphoto(True, photo)
 
     def _watch_dock_icon(self):
-        """Re-apply the dock icon on a timer while heavy imports run, then
-        once more after they finish, and again 1 s later as a safety net.
+        """Re-apply the dock icon on a timer while heavy imports run.
 
-        Why multiple restores?
-          • matplotlib.pyplot import touches NSApplication  ->  resets icon
-          • seaborn import does the same
-          • openpyxl's first read can trigger a secondary Cocoa event loop tick
+        matplotlib/seaborn/openpyxl each touch NSApplication on first import,
+        resetting the dock icon.  The watcher fires every 200 ms until the
+        module import background thread signals it is done (_pf_ready=True),
+        then does one final restore after a short settling delay.
 
-        The watcher fires every 200 ms (was 250) so it catches any reset
-        within one animation frame.
+        Note: since matplotlib is now deferred to first export, the icon is
+        only at risk from openpyxl during startup — the watcher still handles
+        that correctly.
         """
         set_dock_icon()
         if not self._pf_ready:
@@ -537,28 +541,25 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
 
     def _do_import(self):
         try:
-            import matplotlib
-            matplotlib.use("Agg")   # belt-and-suspenders alongside MPLBACKEND env var
+            # Import plotter_functions module only — matplotlib/seaborn/scipy
+            # are NOT loaded here.  They load lazily on first export call via
+            # pf._ensure_imports().  This keeps startup fast and keeps matplotlib
+            # completely out of memory during normal (Plotly-rendered) sessions.
             import plotter_functions as pf
             self._pf = pf
-            # ── _ensure_imports() loads matplotlib.pyplot + seaborn ──────────
-            # These must complete BEFORE _pf_ready flips so that _watch_dock_icon
-            # is still running if Cocoa resets the icon during seaborn init.
-            pf._ensure_imports()
-            self._plt = pf.plt
-            self._pd  = pf.pd
-            # All heavy imports done  -  safe to mark ready and stop the watcher
+            # pandas is lightweight and needed immediately for file validation.
+            import pandas as _pandas_mod
+            self._pd = _pandas_mod
+            # _plt stays None until first matplotlib export — callers must guard:
+            #   if self._plt is not None: self._plt.close(...)
+            self._plt = None
             self._pf_ready = True
-            # One final dock-icon restore after everything settles
             self.after(0, set_dock_icon)
-            # Enable Generate Plot if a file was already validated while loading
             def _check_ready():
                 if self._validated:
                     self._run_btn.config(state="normal", text="Generate Plot")
                 else:
                     self._run_btn.config(state="disabled", text="Generate Plot")
-                # Swatches skipped their custom-palette render during import
-                # (to avoid the deadlock).  Now matplotlib is loaded, refresh them.
                 self._vars["color"].set(self._vars["color"].get())
                 self._sync_analyze_btn()
             self.after(0, _check_ready)
@@ -3469,6 +3470,10 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         reset_sheet=True   ->  set sheet var to first sheet (new file load)
         reset_sheet=False  ->  keep current sheet selection (sheet change trigger)
         """
+        # Invalidate the Excel parse cache whenever the file or sheet changes
+        # so _do_run always reads fresh data for the new file.
+        self._parse_cache_key = None
+        self._parse_cache_df  = None
         # openpyxl first import can trigger a Cocoa tick that resets the dock icon.
         self.after(100, set_dock_icon)
         try:
@@ -5933,12 +5938,31 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         except Exception:
             return None
 
+    def _ensure_matplotlib(self):
+        """Lazily load matplotlib/seaborn and update self._plt.
+
+        Called by export functions and (temporarily) by _do_run while the
+        matplotlib rendering path is still in use.  Safe to call multiple
+        times — subsequent calls are a no-op once self._plt is set.
+        """
+        if self._plt is None and self._pf is not None:
+            self._pf._ensure_imports()          # loads plt, seaborn, scipy
+            self._plt = self._pf.plt
+            # Suppress any dock-icon reset caused by seaborn init
+            self.after(200, set_dock_icon)
+
     def _do_run(self, kw, tab_id=None, job_id=None):
         try:
             if hasattr(self, "_bus"):
                 self._bus.emit("plot.started", kw=kw)
             pd = _pd()  # cached  -  no overhead after first call
-            self._plt.close("all")
+            # Ensure matplotlib is loaded for the chart render.
+            # TODO (Path A): replace this call with a Plotly spec builder so
+            # that _ensure_matplotlib() is never called during normal rendering
+            # and only fires on explicit export.
+            self._ensure_matplotlib()
+            if self._plt is not None:
+                self._plt.close("all")
 
             # Strip internal-only keys before passing to plot functions
             ylim_data_min = kw.pop("_ylim_data_min", False)
@@ -5956,13 +5980,35 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             show_norm_warn = kw.pop("show_normality_warning", True)
             self._pf.__show_normality_warning__ = show_norm_warn
 
+            # ── Excel parse cache ─────────────────────────────────────────────
+            # Read the file at most once per render.  If the same (path, sheet)
+            # was used last time, reuse the cached DataFrame so that consecutive
+            # renders (e.g. changing only colour or font size) skip disk I/O.
+            # Cache is a single slot; it is invalidated whenever path or sheet
+            # changes.  Thread-safe because _do_run is always serialised by the
+            # self._running flag (only one render runs at a time).
+            _excel_path  = kw.get("excel_path", "")
+            _excel_sheet = kw.get("sheet", 0)
+            _cache_key   = (_excel_path, _excel_sheet)
+            if self._parse_cache_key != _cache_key:
+                try:
+                    self._parse_cache_df  = pd.read_excel(
+                        _excel_path, sheet_name=_excel_sheet, header=None)
+                    self._parse_cache_key = _cache_key
+                except Exception:
+                    self._parse_cache_df  = None
+                    self._parse_cache_key = None
+                    _log.debug("App._do_run: could not pre-read Excel file", exc_info=True)
+
+            # Derive group names from cached header row (fast — no second read)
             groups = []
-            try:
-                df_g   = pd.read_excel(kw["excel_path"], sheet_name=kw.get("sheet", 0),
-                                       header=None, nrows=1)
-                groups = [str(c) for c in df_g.iloc[0].dropna().tolist()]
-            except Exception:
-                _log.debug("App._do_run: could not read group names from header row", exc_info=True)
+            if self._parse_cache_df is not None:
+                try:
+                    groups = [str(c) for c in
+                              self._parse_cache_df.iloc[0].dropna().tolist()]
+                except Exception:
+                    _log.debug("App._do_run: could not read group names from header row",
+                               exc_info=True)
 
             pt   = self._plot_type.get()
             spec = next((s for s in _REGISTRY_SPECS if s.key == pt), _REGISTRY_SPECS[0])
@@ -6033,9 +6079,11 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             if hasattr(self, "_bus"):
                 self._bus.emit("plot.completed", kw=_kw_snap)
         except Exception:
-            # Close any figure that fn() may have created before the error
+            # Close any figure that fn() may have created before the error.
+            # Guard against None — matplotlib may not be loaded yet.
             try:
-                self._plt.close("all")
+                if self._plt is not None:
+                    self._plt.close("all")
             except Exception:
                 pass
             err = traceback.format_exc()
@@ -6446,6 +6494,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             copy_results_tsv(self)
 
     def _download_png(self):
+        self._ensure_matplotlib()
         if self._fig is None: return
         from datetime import datetime
         desktop = os.path.join(os.path.expanduser("~"), "Desktop")
