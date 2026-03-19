@@ -2,7 +2,7 @@
 
 > A GraphPad Prism-style scientific plotting application — built entirely by Claude (Anthropic) with Ashwin Pasupathy.
 
-![Tests](https://img.shields.io/badge/tests-522%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-531%20total%20·%20522%20core-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.12+-blue)
 ![Charts](https://img.shields.io/badge/chart%20types-29-orange)
 ![Status](https://img.shields.io/badge/status-active-success)
