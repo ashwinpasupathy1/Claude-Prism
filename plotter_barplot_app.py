@@ -4485,7 +4485,7 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         _hm_color_cb = PCombobox(
             g, textvariable=self._vars["color"],
             values=["Default (Blue-Red)", "Viridis", "Mako", "Plasma",
-                    "Coolwarm", "Refractionl", "YlOrRd", "Blues", "Greens", "RdYlGn"],
+                    "Coolwarm", "Spectral", "YlOrRd", "Blues", "Greens", "RdYlGn"],
             state="readonly", width=22, font=("Helvetica Neue", 12))
         _hm_color_cb.grid(row=r, column=0, sticky="w", padx=PAD, pady=4); r += 1
         add_placeholder(_hm_color_cb, self._vars["color"], "Default (Blue-Red)")
@@ -6561,15 +6561,18 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                 col_cb.config(state="disabled", values=[])
                 col_var.set("")
                 info_var.set("")
+                dpi_cb.config(state="readonly")
             else:
                 opts = list(_pe.JOURNAL_PRESETS[j]["columns"].keys())
                 col_cb.config(state="readonly", values=opts)
                 if not col_var.get() or col_var.get() not in opts:
                     col_var.set(opts[0])
                 p = _pe.JOURNAL_PRESETS[j]
+                dpi_var.set(str(p["dpi"]))
+                dpi_cb.config(state="disabled")
                 info_var.set(
                     f"{j}: {p['font']} ≥{p['min_font']}pt · "
-                    f"≥{p['dpi']} DPI · max height {p['max_h_mm']} mm")
+                    f"{p['dpi']} DPI · max height {p['max_h_mm']} mm")
 
         journal_var.trace_add("write", _update_cols)
 
@@ -6582,14 +6585,14 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             values=["PNG (high-res)", "SVG (vector)", "PDF", "HTML (interactive)"]
         ).grid(row=3, column=1, sticky="w", **pad)
 
-        # DPI row (only relevant for PNG)
+        # DPI row (disabled when a journal preset is active — preset DPI takes precedence)
         tk.Label(dlg, text="DPI (PNG only):", anchor="w").grid(
             row=4, column=0, sticky="w", **pad)
         dpi_var = tk.StringVar(value="300")
-        ttk.Combobox(
+        dpi_cb = ttk.Combobox(
             dlg, textvariable=dpi_var, state="readonly", width=22,
-            values=["150", "300", "600"]
-        ).grid(row=4, column=1, sticky="w", **pad)
+            values=["150", "300", "600"])
+        dpi_cb.grid(row=4, column=1, sticky="w", **pad)
 
         # ── Export action ──────────────────────────────────────────────────────
         def _do_export():
@@ -6641,9 +6644,11 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
                     self._last_chart_type is not None and
                     _pe.kaleido_available()):
                 try:
+                    import json as _json
                     from plotter_server import _build_spec
                     spec_json = _build_spec(self._last_chart_type, self._last_kw)
-                    if "error" not in spec_json[:50]:
+                    _spec_obj = _json.loads(spec_json)
+                    if "error" not in _spec_obj:
                         _pe.export_plotly(
                             spec_json, path,
                             journal=journal if journal != "Custom" else None,

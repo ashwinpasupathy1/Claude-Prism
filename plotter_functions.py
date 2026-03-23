@@ -3105,7 +3105,7 @@ def plotter_heatmap(
         "Mako":               "mako",
         "Plasma":             "plasma",
         "Coolwarm":           "coolwarm",
-        "Refractionl":           "Refractionl_r",
+        "Spectral":              "Spectral_r",
         "YlOrRd":             "YlOrRd",
         "Blues":              "Blues",
         "Greens":             "Greens",

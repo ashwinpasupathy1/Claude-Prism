@@ -175,6 +175,10 @@ def export_matplotlib(
     This path is used when kaleido is unavailable.  Only the figure
     dimensions and DPI are adjusted; font size must be set in the app
     before generating the plot.
+
+    The live figure is not mutated: ``set_size_inches(..., forward=False)``
+    is used to resize for export without propagating the change to the
+    Tk canvas backend, and the original size is restored afterwards.
     """
     if journal and journal in JOURNAL_PRESETS and col_label:
         w_in, h_in, _dpi = _dims_from_preset(journal, col_label)
@@ -182,9 +186,14 @@ def export_matplotlib(
         w_in, h_in, _dpi = None, None, dpi
 
     if w_in is not None:
-        mpl_fig.set_size_inches(w_in, h_in)
-
-    mpl_fig.savefig(path, dpi=_dpi, bbox_inches="tight")
+        orig_w, orig_h = mpl_fig.get_size_inches()
+        mpl_fig.set_size_inches(w_in, h_in, forward=False)
+        try:
+            mpl_fig.savefig(path, dpi=_dpi, bbox_inches="tight")
+        finally:
+            mpl_fig.set_size_inches(orig_w, orig_h, forward=False)
+    else:
+        mpl_fig.savefig(path, dpi=_dpi, bbox_inches="tight")
 
 
 # ── Kaleido availability check ────────────────────────────────────────────────
