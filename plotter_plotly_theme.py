@@ -1,16 +1,16 @@
 """Plotly theme matching Refraction's matplotlib style."""
 
-SPECTRA_PALETTE = [
+PRISM_PALETTE = [
     "#E8453C", "#2274A5", "#32936F", "#F18F01", "#A846A0",
     "#6B4226", "#048A81", "#D4AC0D", "#3B1F2B", "#44BBA4",
 ]
 
-SPECTRA_TEMPLATE = {
+PRISM_TEMPLATE = {
     "layout": {
         "font": {"family": "Arial, sans-serif", "size": 12, "color": "#222222"},
         "paper_bgcolor": "white",
         "plot_bgcolor": "white",
-        "colorway": SPECTRA_PALETTE,
+        "colorway": PRISM_PALETTE,
         "xaxis": {
             "showgrid": False,
             "zeroline": False,

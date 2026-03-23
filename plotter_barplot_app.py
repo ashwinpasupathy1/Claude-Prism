@@ -1553,6 +1553,8 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
         self._plot_frame    = None   # points to active tab's plot_frame; set by TabManager
         self._canvas_widget = None   # FigureCanvasTkAgg; updated on tab switch
         self._fig           = None   # matplotlib Figure; updated on tab switch
+        self._last_kw       = None   # kw dict from last successful render (for export)
+        self._last_chart_type = None # chart type from last successful render
         self._zoom_level    = 1.0
 
         self._empty_state_frame = ttk.Frame(self._plot_canvas)
@@ -6150,6 +6152,17 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             if tab is not None:
                 tab.fig = fig
 
+            # Store last successful render state for journal export
+            if kw:
+                import copy as _copy_embed
+                self._last_kw = _copy_embed.deepcopy(kw)
+            _pt_web = kw.get("plot_type", "") if kw else ""
+            if not _pt_web and hasattr(self, "_plot_type"):
+                _pt_web = self._plot_type.get()
+            if hasattr(_pt_web, "get"):
+                _pt_web = _pt_web.get()
+            self._last_chart_type = str(_pt_web) if _pt_web else None
+
             # Phase 3: try Plotly webview for priority chart types
             _pt_web = kw.get("plot_type", "") if kw else ""
             if not _pt_web and hasattr(self, "_plot_type"):
@@ -6494,40 +6507,183 @@ class App(TkinterDnD.Tk if _DND_AVAILABLE else tk.Tk):
             copy_results_tsv(self)
 
     def _download_png(self):
-        self._ensure_matplotlib()
-        if self._fig is None: return
-        from datetime import datetime
-        desktop = os.path.join(os.path.expanduser("~"), "Desktop")
-        # Pre-fill with plot title or source filename
-        title_str = self._vars.get("title", tk.StringVar()).get().strip()
-        src_path  = self._vars.get("excel_path", tk.StringVar()).get().strip()
-        if title_str:
-            safe = "".join(c if c.isalnum() or c in " _-" else "_" for c in title_str).strip()
-            default_name = safe[:60] or "refraction"
-        elif src_path:
-            default_name = os.path.splitext(os.path.basename(src_path))[0][:60]
-        else:
-            default_name = f"refraction_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        path = filedialog.asksaveasfilename(
-            initialdir=desktop, initialfile=f"{default_name}.png",
-            defaultextension=".png",
-            filetypes=[("PNG image", "*.png"),
-                       ("TIFF image", "*.tiff"),
-                       ("EPS vector", "*.eps"),
-                       ("SVG vector", "*.svg"),
-                       ("PDF", "*.pdf"),
-                       ("All files", "*.*")],
-            title="Save plot")
-        if path:
-            ext = os.path.splitext(path)[1].lower()
-            if ext == ".png":
-                dpi = 600
-            elif ext == ".tiff":
-                dpi = 300
+        """Open the journal export dialog, then save the figure."""
+        if self._fig is None and self._last_kw is None:
+            from tkinter import messagebox
+            messagebox.showwarning("Nothing to export", "Generate a plot first.")
+            return
+        self._show_export_dialog()
+
+    def _show_export_dialog(self):
+        """Show a journal-preset export dialog and save the figure."""
+        import importlib
+        from tkinter import messagebox, filedialog
+
+        try:
+            import plotter_export as _pe
+        except ImportError:
+            messagebox.showerror("Export error", "plotter_export module not found.")
+            return
+
+        # ── Build dialog ───────────────────────────────────────────────────────
+        dlg = tk.Toplevel(self)
+        dlg.title("Export Figure")
+        dlg.resizable(False, False)
+        dlg.grab_set()
+
+        pad = dict(padx=10, pady=5)
+
+        # Journal row
+        tk.Label(dlg, text="Journal preset:", anchor="w").grid(
+            row=0, column=0, sticky="w", **pad)
+        journal_var = tk.StringVar(value="Custom")
+        journal_cb  = ttk.Combobox(
+            dlg, textvariable=journal_var, state="readonly", width=22,
+            values=["Custom"] + list(_pe.JOURNAL_PRESETS.keys()))
+        journal_cb.grid(row=0, column=1, sticky="w", **pad)
+
+        # Column width row (only active when journal ≠ Custom)
+        tk.Label(dlg, text="Column width:", anchor="w").grid(
+            row=1, column=0, sticky="w", **pad)
+        col_var = tk.StringVar()
+        col_cb  = ttk.Combobox(dlg, textvariable=col_var, state="disabled", width=22)
+        col_cb.grid(row=1, column=1, sticky="w", **pad)
+
+        # Info label
+        info_var = tk.StringVar(value="")
+        tk.Label(dlg, textvariable=info_var, foreground="#666", font=("Arial", 9),
+                 anchor="w", wraplength=300).grid(
+            row=2, column=0, columnspan=2, sticky="w", padx=10, pady=2)
+
+        def _update_cols(*_):
+            j = journal_var.get()
+            if j == "Custom":
+                col_cb.config(state="disabled", values=[])
+                col_var.set("")
+                info_var.set("")
             else:
-                dpi = 150
-            self._fig.savefig(path, dpi=dpi, bbox_inches="tight")
-            self._set_status(f"Saved  -  {os.path.basename(path)}")
+                opts = list(_pe.JOURNAL_PRESETS[j]["columns"].keys())
+                col_cb.config(state="readonly", values=opts)
+                if not col_var.get() or col_var.get() not in opts:
+                    col_var.set(opts[0])
+                p = _pe.JOURNAL_PRESETS[j]
+                info_var.set(
+                    f"{j}: {p['font']} ≥{p['min_font']}pt · "
+                    f"≥{p['dpi']} DPI · max height {p['max_h_mm']} mm")
+
+        journal_var.trace_add("write", _update_cols)
+
+        # Format row
+        tk.Label(dlg, text="Format:", anchor="w").grid(
+            row=3, column=0, sticky="w", **pad)
+        fmt_var = tk.StringVar(value="PNG (high-res)")
+        ttk.Combobox(
+            dlg, textvariable=fmt_var, state="readonly", width=22,
+            values=["PNG (high-res)", "SVG (vector)", "PDF", "HTML (interactive)"]
+        ).grid(row=3, column=1, sticky="w", **pad)
+
+        # DPI row (only relevant for PNG)
+        tk.Label(dlg, text="DPI (PNG only):", anchor="w").grid(
+            row=4, column=0, sticky="w", **pad)
+        dpi_var = tk.StringVar(value="300")
+        ttk.Combobox(
+            dlg, textvariable=dpi_var, state="readonly", width=22,
+            values=["150", "300", "600"]
+        ).grid(row=4, column=1, sticky="w", **pad)
+
+        # ── Export action ──────────────────────────────────────────────────────
+        def _do_export():
+            journal = journal_var.get()
+            col     = col_var.get() if journal != "Custom" else None
+            fmt     = fmt_var.get()
+            try:
+                dpi = int(dpi_var.get())
+            except ValueError:
+                dpi = 300
+
+            _fmt_map = {
+                "PNG (high-res)":      (".png",  "PNG image",  "*.png"),
+                "SVG (vector)":        (".svg",  "SVG vector", "*.svg"),
+                "PDF":                 (".pdf",  "PDF",        "*.pdf"),
+                "HTML (interactive)":  (".html", "HTML",       "*.html"),
+            }
+            ext, desc, glob = _fmt_map.get(fmt, (".png", "PNG image", "*.png"))
+
+            from datetime import datetime
+            desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+            title_str = self._vars.get("title", tk.StringVar()).get().strip()
+            src_path  = self._vars.get("excel_path", tk.StringVar()).get().strip()
+            if title_str:
+                safe = "".join(c if c.isalnum() or c in " _-" else "_"
+                               for c in title_str).strip()
+                default_name = safe[:60] or "refraction"
+            elif src_path:
+                default_name = os.path.splitext(os.path.basename(src_path))[0][:60]
+            else:
+                default_name = f"refraction_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+            path = filedialog.asksaveasfilename(
+                parent=dlg,
+                initialdir=desktop,
+                initialfile=f"{default_name}{ext}",
+                defaultextension=ext,
+                filetypes=[(desc, glob), ("All files", "*.*")],
+                title="Save figure")
+            if not path:
+                return
+
+            dlg.destroy()
+
+            # Try kaleido first if we have the last kw + chart type
+            _used_kaleido = False
+            if (ext != ".tiff" and
+                    self._last_kw is not None and
+                    self._last_chart_type is not None and
+                    _pe.kaleido_available()):
+                try:
+                    from plotter_server import _build_spec
+                    spec_json = _build_spec(self._last_chart_type, self._last_kw)
+                    if "error" not in spec_json[:50]:
+                        _pe.export_plotly(
+                            spec_json, path,
+                            journal=journal if journal != "Custom" else None,
+                            col_label=col,
+                            dpi=dpi)
+                        self._set_status(f"Saved  ·  {os.path.basename(path)}")
+                        _used_kaleido = True
+                except Exception as exc:
+                    _log.warning("Kaleido export failed (%s), falling back to matplotlib", exc)
+
+            # Matplotlib fallback
+            if not _used_kaleido:
+                self._ensure_matplotlib()
+                if self._fig is None:
+                    messagebox.showerror("Export failed",
+                        "No rendered figure available. Generate a plot first.")
+                    return
+                try:
+                    _pe.export_matplotlib(
+                        self._fig, path,
+                        journal=journal if journal != "Custom" else None,
+                        col_label=col,
+                        dpi=dpi)
+                    self._set_status(f"Saved  ·  {os.path.basename(path)}")
+                except Exception as exc:
+                    messagebox.showerror("Export failed", str(exc))
+
+        # ── Buttons ────────────────────────────────────────────────────────────
+        btn_frame = tk.Frame(dlg)
+        btn_frame.grid(row=5, column=0, columnspan=2, pady=(10, 8))
+        ttk.Button(btn_frame, text="Export", command=_do_export).pack(
+            side="left", padx=6)
+        ttk.Button(btn_frame, text="Cancel", command=dlg.destroy).pack(
+            side="left", padx=6)
+
+        # Centre dialog over main window
+        dlg.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width()  - dlg.winfo_width())  // 2
+        y = self.winfo_y() + (self.winfo_height() - dlg.winfo_height()) // 2
+        dlg.geometry(f"+{x}+{y}")
 
 
     def _start_spinner(self):
