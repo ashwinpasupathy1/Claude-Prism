@@ -1,8 +1,8 @@
-"""Bar chart analyzer — renderer-independent.
+"""Box plot analyzer — renderer-independent.
 
 Reads columnar Excel data (one column per group, values in rows)
-and produces a ChartSpec with per-group means, error bars, and
-optional raw data points and stats brackets.
+and produces a ChartSpec with per-group box statistics, outliers,
+optional raw data points, and stats brackets.
 """
 
 from __future__ import annotations
@@ -14,28 +14,33 @@ from refraction.analysis.helpers import read_data, resolve_colors, extract_confi
 from refraction.analysis.stats_annotator import build_stats_brackets
 
 
-def _calc_error(vals: list[float], error_type: str) -> float:
-    """Return the half-width of the error bar for *vals*."""
-    if len(vals) < 2:
-        return 0.0
+def _box_stats(vals: list[float]) -> dict:
+    """Compute box plot statistics for a single group."""
     arr = np.array(vals)
-    if error_type == "sd":
-        return float(np.std(arr, ddof=1))
-    if error_type == "ci95":
-        se = float(np.std(arr, ddof=1) / np.sqrt(len(arr)))
-        return se * 1.96
-    # default: SEM
-    return float(np.std(arr, ddof=1) / np.sqrt(len(arr)))
+    q1 = float(np.percentile(arr, 25))
+    median = float(np.median(arr))
+    q3 = float(np.percentile(arr, 75))
+    iqr = q3 - q1
+    whisker_lo = float(max(arr.min(), q1 - 1.5 * iqr))
+    whisker_hi = float(min(arr.max(), q3 + 1.5 * iqr))
+    outliers = [float(v) for v in arr if v < whisker_lo or v > whisker_hi]
+    return {
+        "q1": q1,
+        "median": median,
+        "q3": q3,
+        "whisker_lo": whisker_lo,
+        "whisker_hi": whisker_hi,
+        "outliers": outliers,
+    }
 
 
-def analyze_bar(kw: dict) -> ChartSpec:
-    """Analyze bar chart data and return a ChartSpec.
+def analyze_box(kw: dict) -> ChartSpec:
+    """Analyze box plot data and return a ChartSpec.
 
     Data payload keys:
         groups: list[str] — group names
-        means: list[float] — mean per group
-        errors: list[float] — error bar half-width per group
-        error_type: str — "sem", "sd", or "ci95"
+        box_stats: list[dict] — per-group box statistics with keys:
+            q1, median, q3, whisker_lo, whisker_hi, outliers
         raw_points: list[list[float]] | None — per-group raw values
     """
     cfg = extract_config(kw)
@@ -45,13 +50,16 @@ def analyze_bar(kw: dict) -> ChartSpec:
     values = {g: df[g].dropna().astype(float).tolist() for g in groups}
     colors = resolve_colors(cfg["color"], len(groups))
 
-    means = []
-    errors = []
+    stats_list = []
     for g in groups:
         vals = values[g]
-        m = float(np.mean(vals)) if vals else 0.0
-        means.append(m)
-        errors.append(_calc_error(vals, cfg["error_type"]))
+        if vals:
+            stats_list.append(_box_stats(vals))
+        else:
+            stats_list.append({
+                "q1": 0.0, "median": 0.0, "q3": 0.0,
+                "whisker_lo": 0.0, "whisker_hi": 0.0, "outliers": [],
+            })
 
     # Optional raw points
     raw_points = None
@@ -64,7 +72,7 @@ def analyze_bar(kw: dict) -> ChartSpec:
     )
 
     return ChartSpec(
-        chart_type="bar",
+        chart_type="box",
         title=cfg["title"],
         x_axis=AxisSpec(label=cfg["xlabel"]),
         y_axis=AxisSpec(
@@ -77,16 +85,13 @@ def analyze_bar(kw: dict) -> ChartSpec:
             alpha=cfg["alpha"],
             point_size=cfg["point_size"],
             point_alpha=cfg["point_alpha"],
-            bar_width=cfg["bar_width"],
             font_size=cfg["font_size"],
             axis_style=cfg["axis_style"],
             gridlines=cfg["gridlines"],
         ),
         data={
             "groups": groups,
-            "means": means,
-            "errors": errors,
-            "error_type": cfg["error_type"],
+            "box_stats": stats_list,
             "raw_points": raw_points,
         },
         stats=brackets,

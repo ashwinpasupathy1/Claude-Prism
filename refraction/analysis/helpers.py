@@ -1,54 +1,64 @@
-"""Shared helpers for analysis engine — data reading and color resolution."""
+"""Shared helpers for analysis modules."""
 
 from __future__ import annotations
 
 import pandas as pd
 
-PRISM_PALETTE = [
-    "#E8453C", "#2274A5", "#32936F", "#F18F01", "#A846A0",
-    "#6B4226", "#048A81", "#D4AC0D", "#3B1F2B", "#44BBA4",
-]
+from refraction.specs.theme import PRISM_PALETTE
 
 
-def read_data(path: str, sheet: int | str = 0, *, header: int = 0) -> pd.DataFrame:
+def read_data(excel_path: str, sheet=0, *, header=0) -> pd.DataFrame:
     """Read an Excel/CSV file and return a DataFrame.
 
-    Raises ValueError with a descriptive message on failure.
+    Raises FileNotFoundError or ValueError on failure.
     """
-    ext = str(path).rsplit(".", 1)[-1].lower()
-    try:
-        if ext == "csv":
-            return pd.read_csv(path, header=header)
-        return pd.read_excel(path, sheet_name=sheet, header=header)
-    except Exception as e:
-        raise ValueError(f"Cannot read data file: {e}") from e
+    path = str(excel_path)
+    if path.endswith(".csv"):
+        return pd.read_csv(path, header=header)
+    return pd.read_excel(path, sheet_name=sheet, header=header)
 
 
-def resolve_colors(color: str | list[str] | None, n: int) -> list[str]:
-    """Resolve a color argument to a list of n hex colors.
+def resolve_colors(color, n: int) -> list[str]:
+    """Resolve a color argument to a list of *n* hex strings.
 
-    - None → cycle through PRISM_PALETTE
-    - Single string → repeat n times
-    - List → use as-is (cycle if shorter than n)
+    Accepts: list[str], single str, or None (falls back to PRISM_PALETTE).
     """
-    if color is None:
-        return [PRISM_PALETTE[i % len(PRISM_PALETTE)] for i in range(n)]
+    if isinstance(color, list):
+        # Extend with palette if too short
+        while len(color) < n:
+            color.append(PRISM_PALETTE[len(color) % len(PRISM_PALETTE)])
+        return color[:n]
     if isinstance(color, str):
         return [color] * n
-    # List of colors — cycle if needed
-    return [color[i % len(color)] for i in range(n)]
+    return [PRISM_PALETTE[i % len(PRISM_PALETTE)] for i in range(n)]
 
 
-def extract_config(kw: dict, **defaults: str) -> dict:
-    """Extract common config keys from kwargs with defaults.
+def extract_config(kw: dict) -> dict:
+    """Pull common configuration keys from the plotter kwargs dict.
 
-    Always returns: data_path, sheet, title, xlabel, ylabel, color.
+    Returns a flat dict with normalised keys that every analyzer needs.
     """
     return {
-        "data_path": kw.get("excel_path", kw.get("data_path", "")),
+        "excel_path": kw.get("excel_path", ""),
         "sheet": kw.get("sheet", 0),
-        "title": kw.get("title", defaults.get("title", "")),
-        "xlabel": kw.get("xlabel", defaults.get("xlabel", "")),
-        "ylabel": kw.get("ytitle", kw.get("ylabel", defaults.get("ylabel", ""))),
+        "title": kw.get("title", ""),
+        "xlabel": kw.get("xlabel", ""),
+        "ytitle": kw.get("ytitle", ""),
         "color": kw.get("color", None),
+        "yscale": kw.get("yscale", "linear"),
+        "ylim": kw.get("ylim", None),
+        "figsize": kw.get("figsize", (5, 5)),
+        "font_size": kw.get("font_size", 12.0),
+        "axis_style": kw.get("axis_style", "open"),
+        "gridlines": kw.get("gridlines", False),
+        "error_type": kw.get("error_type", "sem"),
+        "show_points": kw.get("show_points", False),
+        "point_size": kw.get("point_size", 6.0),
+        "point_alpha": kw.get("point_alpha", 0.80),
+        "bar_width": kw.get("bar_width", 0.8),
+        "alpha": kw.get("alpha", 0.85),
+        "line_width": kw.get("line_width", 2.0),
+        "stats_test": kw.get("stats_test", ""),
+        "posthoc": kw.get("posthoc", ""),
+        "correction": kw.get("correction", ""),
     }

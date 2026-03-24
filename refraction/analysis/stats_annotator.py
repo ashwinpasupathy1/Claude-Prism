@@ -1,134 +1,156 @@
-"""Converts raw _run_stats output into renderer-independent annotations."""
+"""Build StatsBracket annotations from group data.
+
+Runs the requested statistical test (t-test, ANOVA, etc.) and returns
+a list of StatsBracket dataclass instances ready to attach to a ChartSpec.
+"""
 
 from __future__ import annotations
 
-import numpy as np
-from refraction.analysis.schema import (
-    Bracket, Comparison, NormalityResult, StatsResult,
-)
+from refraction.analysis.schema import StatsBracket
 
 
-def annotate_stats(
+def _p_to_label(p: float) -> str:
+    """Convert a p-value to a significance label."""
+    if p <= 0.001:
+        return "***"
+    if p <= 0.01:
+        return "**"
+    if p <= 0.05:
+        return "*"
+    return "ns"
+
+
+def build_stats_brackets(
     groups: dict[str, list[float]],
-    *,
-    stats_test: str = "parametric",
-    posthoc: str = "Tukey HSD",
-    mc_correction: str = "Holm-Bonferroni",
-    control: str | None = None,
-    n_permutations: int = 9999,
-    mu0: float = 0.0,
-    p_threshold: float = 0.05,
-    show_ns: bool = False,
-) -> tuple[StatsResult, list[Bracket]]:
-    """Run statistical tests and return a StatsResult + bracket list.
+    stats_test: str,
+    posthoc: str = "",
+    correction: str = "",
+) -> list[StatsBracket]:
+    """Compute pairwise comparisons and return StatsBracket list.
 
     Args:
-        groups: {name: [values]} dict of group data.
-        stats_test: "parametric" | "nonparametric" | "paired" | "permutation" | "one_sample"
-        posthoc: posthoc method name
-        mc_correction: multiple comparison correction method
-        control: control group name for vs-control comparisons
-        n_permutations: number of permutation resamples
-        mu0: null hypothesis mean for one-sample test
-        p_threshold: significance threshold
-        show_ns: include non-significant brackets
+        groups: Mapping of group name -> list of numeric values.
+        stats_test: Name of the test (e.g. "t-test", "anova", "mann-whitney").
+        posthoc: Post-hoc test name (for ANOVA).
+        correction: Multiple-comparison correction method.
 
     Returns:
-        (StatsResult, list[Bracket])
+        List of StatsBracket instances, sorted by stacking_order.
     """
-    from refraction.core.chart_helpers import (
-        _run_stats, check_normality, _cohens_d, _hedges_g,
-        _rank_biserial_r,
-    )
+    if not stats_test:
+        return []
 
-    # Convert lists to numpy arrays for _run_stats
-    np_groups = {k: np.array(v, dtype=float) for k, v in groups.items()}
+    group_names = list(groups.keys())
+    if len(group_names) < 2:
+        return []
 
-    # Run stats
-    raw_results = _run_stats(
-        np_groups,
-        test_type=stats_test,
-        posthoc=posthoc,
-        mc_correction=mc_correction,
-        control=control,
-        n_permutations=n_permutations,
-        mu0=mu0,
-    )
+    brackets: list[StatsBracket] = []
 
-    # Build comparisons with effect sizes
-    comparisons = []
-    for result_tuple in raw_results:
-        ga, gb, p_adj, stars = result_tuple
-        # Compute effect size if both groups exist
-        effect_size = None
-        effect_type = None
-        if ga in np_groups and gb in np_groups:
-            a, b = np_groups[ga], np_groups[gb]
-            if stats_test in ("parametric", "paired"):
-                effect_size = float(_cohens_d(a, b))
-                effect_type = "Cohen's d"
-            elif stats_test == "nonparametric":
-                effect_size = float(_rank_biserial_r(a, b))
-                effect_type = "rank-biserial r"
+    try:
+        from scipy import stats as sp_stats
+    except ImportError:
+        return []
 
-        comparisons.append(Comparison(
-            group_a=str(ga),
-            group_b=str(gb),
-            p_raw=float(p_adj),  # _run_stats already applies correction
-            p_adjusted=float(p_adj),
-            stars=stars,
-            effect_size=effect_size,
-            effect_type=effect_type,
-        ))
+    test = stats_test.lower().replace("-", "").replace("_", "").replace(" ", "")
 
-    # Build normality results
-    # check_normality returns {name: (stat, p, is_normal, warning_msg)}
-    normality_raw = check_normality(np_groups)
-    normality = {}
-    for k, v in normality_raw.items():
-        _stat, _p, _is_normal, _msg = v
-        if _p is not None:
-            normality[k] = NormalityResult(shapiro_p=float(_p), normal=bool(_is_normal))
-        else:
-            normality[k] = NormalityResult(shapiro_p=0.0, normal=True)
+    if test in ("ttest", "unpairedttest", "studentttest"):
+        # Pairwise t-tests between all pairs
+        order = 0
+        for i in range(len(group_names)):
+            for j in range(i + 1, len(group_names)):
+                a_vals = groups[group_names[i]]
+                b_vals = groups[group_names[j]]
+                if len(a_vals) < 2 or len(b_vals) < 2:
+                    continue
+                _, p = sp_stats.ttest_ind(a_vals, b_vals)
+                brackets.append(StatsBracket(
+                    group_a=group_names[i],
+                    group_b=group_names[j],
+                    p_value=p,
+                    label=_p_to_label(p),
+                    stacking_order=order,
+                ))
+                order += 1
 
-    stats_result = StatsResult(
-        test=_test_display_name(stats_test, posthoc, len(groups)),
-        posthoc=posthoc if len(groups) > 2 else None,
-        correction=mc_correction,
-        comparisons=comparisons,
-        normality=normality,
-    )
+    elif test in ("mannwhitney", "mannwhitneyutest", "mannwhitneyu"):
+        order = 0
+        for i in range(len(group_names)):
+            for j in range(i + 1, len(group_names)):
+                a_vals = groups[group_names[i]]
+                b_vals = groups[group_names[j]]
+                if len(a_vals) < 1 or len(b_vals) < 1:
+                    continue
+                _, p = sp_stats.mannwhitneyu(a_vals, b_vals, alternative="two-sided")
+                brackets.append(StatsBracket(
+                    group_a=group_names[i],
+                    group_b=group_names[j],
+                    p_value=p,
+                    label=_p_to_label(p),
+                    stacking_order=order,
+                ))
+                order += 1
 
-    # Build brackets (only significant unless show_ns)
-    brackets = []
-    for comp in comparisons:
-        if comp.stars == "ns" and not show_ns:
-            continue
-        brackets.append(Bracket(
-            group_a=comp.group_a,
-            group_b=comp.group_b,
-            label=comp.stars,
-            p=comp.p_adjusted,
-        ))
+    elif test in ("anova", "onewayanova"):
+        all_vals = [groups[g] for g in group_names if len(groups[g]) >= 2]
+        if len(all_vals) >= 2:
+            _, p_omnibus = sp_stats.f_oneway(*all_vals)
+            if p_omnibus <= 0.05:
+                # Pairwise post-hoc (Tukey-like using t-tests as fallback)
+                order = 0
+                for i in range(len(group_names)):
+                    for j in range(i + 1, len(group_names)):
+                        a_vals = groups[group_names[i]]
+                        b_vals = groups[group_names[j]]
+                        if len(a_vals) < 2 or len(b_vals) < 2:
+                            continue
+                        _, p = sp_stats.ttest_ind(a_vals, b_vals)
+                        brackets.append(StatsBracket(
+                            group_a=group_names[i],
+                            group_b=group_names[j],
+                            p_value=p,
+                            label=_p_to_label(p),
+                            stacking_order=order,
+                        ))
+                        order += 1
 
-    return stats_result, brackets
+    elif test in ("pairedttest", "pairedt"):
+        # Only works for exactly 2 groups with matched observations
+        if len(group_names) == 2:
+            a_vals = groups[group_names[0]]
+            b_vals = groups[group_names[1]]
+            n = min(len(a_vals), len(b_vals))
+            if n >= 2:
+                _, p = sp_stats.ttest_rel(a_vals[:n], b_vals[:n])
+                brackets.append(StatsBracket(
+                    group_a=group_names[0],
+                    group_b=group_names[1],
+                    p_value=p,
+                    label=_p_to_label(p),
+                    stacking_order=0,
+                ))
 
+    elif test in ("kruskalwallis", "kruskal"):
+        all_vals = [groups[g] for g in group_names if len(groups[g]) >= 1]
+        if len(all_vals) >= 2:
+            _, p_omnibus = sp_stats.kruskal(*all_vals)
+            if p_omnibus <= 0.05:
+                order = 0
+                for i in range(len(group_names)):
+                    for j in range(i + 1, len(group_names)):
+                        a_vals = groups[group_names[i]]
+                        b_vals = groups[group_names[j]]
+                        if len(a_vals) < 1 or len(b_vals) < 1:
+                            continue
+                        _, p = sp_stats.mannwhitneyu(
+                            a_vals, b_vals, alternative="two-sided"
+                        )
+                        brackets.append(StatsBracket(
+                            group_a=group_names[i],
+                            group_b=group_names[j],
+                            p_value=p,
+                            label=_p_to_label(p),
+                            stacking_order=order,
+                        ))
+                        order += 1
 
-def _test_display_name(test_type: str, posthoc: str, k: int) -> str:
-    """Human-readable test name for the stats result."""
-    if test_type == "one_sample":
-        return "One-sample t-test"
-    if test_type == "paired":
-        return "Paired t-test" if k == 2 else "Pairwise paired t-tests"
-    if test_type == "parametric":
-        if k == 2:
-            return "Welch t-test"
-        return f"One-way ANOVA + {posthoc}"
-    if test_type == "nonparametric":
-        if k == 2:
-            return "Mann-Whitney U"
-        return "Kruskal-Wallis + Dunn's"
-    if test_type == "permutation":
-        return "Permutation test"
-    return test_type
+    return brackets
