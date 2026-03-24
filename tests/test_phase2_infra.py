@@ -44,7 +44,7 @@ class _Var:
 
 section("plotter_undo")
 
-from plotter_undo import Command, CompoundCommand, UndoStack
+from refraction.core.undo import Command, CompoundCommand, UndoStack
 
 
 def test_undo_basic_push_and_undo():
@@ -181,7 +181,7 @@ run("Command: missing var key in app_vars does not crash", test_command_missing_
 
 section("plotter_events")
 
-from plotter_events import (
+from refraction.core.events import (
     EventBus,
     FILE_LOADED, PLOT_FINISHED, PLOT_FAILED, SETTINGS_CHANGED,
 )
@@ -295,7 +295,7 @@ run("EventBus: higher-priority handlers fire first", test_event_priority_orderin
 
 section("plotter_session")
 
-from plotter_session import Session
+from refraction.core.session import Session
 
 
 def test_session_capture():
@@ -335,7 +335,7 @@ run("Session.restore: ignores keys not present in app_vars", test_session_restor
 def test_session_round_trip(tmp_dir):
     sess = Session()
     # Temporarily redirect PREFS_PATH
-    import plotter_session as _ps
+    from refraction.core import session as _ps
     orig_path = _ps.PREFS_PATH
     _ps.PREFS_PATH = os.path.join(tmp_dir, "session.json")
     try:
@@ -353,7 +353,7 @@ run("Session: save_to_disk / load_from_disk round-trip preserves data",
 
 def test_session_load_missing_file():
     sess = Session()
-    import plotter_session as _ps
+    from refraction.core import session as _ps
     orig_path = _ps.PREFS_PATH
     _ps.PREFS_PATH = "/tmp/__nonexistent_claude_plotter_session__.json"
     try:
@@ -382,7 +382,7 @@ run("Session.restore: calls set_plot_type_fn with saved plot type", test_session
 
 section("plotter_presets")
 
-import plotter_presets as _pp
+from refraction.core import presets as _pp
 
 
 def test_presets_list_builtins():
@@ -425,7 +425,7 @@ run("plotter_presets: load_preset raises FileNotFoundError for unknown preset",
 
 
 def test_presets_save_and_load_custom(tmp_path):
-    import plotter_presets as pp_mod
+    from refraction.core import presets as pp_mod
     orig_dir = pp_mod.PRESETS_DIR
     pp_mod.PRESETS_DIR = str(tmp_path) + os.sep
     try:
@@ -454,7 +454,7 @@ run("plotter_presets: delete_preset returns False for built-ins", test_presets_d
 
 
 def test_presets_delete_custom(tmp_path):
-    import plotter_presets as pp_mod
+    from refraction.core import presets as pp_mod
     orig_dir = pp_mod.PRESETS_DIR
     pp_mod.PRESETS_DIR = str(tmp_path) + os.sep
     try:
@@ -494,7 +494,7 @@ run("plotter_presets: apply_preset writes values into vars, ignores _ keys",
 
 section("plotter_errors")
 
-from plotter_errors import ErrorReporter, log_info, log_warning, log_error
+from refraction.core.errors import ErrorReporter, log_info, log_warning, log_error
 
 
 def test_error_reporter_no_root_does_not_crash():
@@ -572,7 +572,7 @@ run("ErrorReporter.set_root: accepts None without crashing", test_error_reporter
 
 section("plotter_project")
 
-from plotter_project import save_project, load_project, get_thumbnail, EXTENSION
+from refraction.io.project import save_project, load_project, get_thumbnail, EXTENSION
 
 
 def _make_excel(path):
@@ -687,7 +687,7 @@ run("plotter_project: EXTENSION constant is '.cplot'", test_project_extension_co
 
 section("plotter_registry")
 
-from plotter_registry import PlotTypeConfig, _REGISTRY_SPECS, ERROR_TYPE_MAP, STATS_TEST_MAP
+from refraction.core.registry import PlotTypeConfig, _REGISTRY_SPECS, ERROR_TYPE_MAP, STATS_TEST_MAP
 
 
 def test_registry_not_empty():
@@ -723,7 +723,7 @@ run("plotter_registry: every entry has non-empty key, label, fn_name, tab_mode, 
 
 
 def test_registry_fn_names_exist_in_plotter_functions():
-    import plotter_functions as pf
+    from refraction.core import chart_helpers as pf
     missing = []
     for spec in _REGISTRY_SPECS:
         if not hasattr(pf, spec.fn_name):
@@ -764,7 +764,7 @@ run("plotter_registry: kaplan_meier config has correct flags", test_registry_kap
 
 def test_registry_filter_kwargs():
     """filter_kwargs strips keys the function does not accept."""
-    import plotter_functions as pf
+    from refraction.core import chart_helpers as pf
     spec = next(s for s in _REGISTRY_SPECS if s.key == "bar")
     fn = getattr(pf, spec.fn_name)
     kw = {"excel_path": "/tmp/x.xlsx", "sheet": 0, "color": "default",
@@ -799,7 +799,7 @@ run("plotter_registry: STATS_TEST_MAP has correct mappings", test_registry_stats
 
 section("plotter_types")
 
-from plotter_types import (
+from refraction.core.types import (
     DataSource, StyleParams, LabelParams, StatsParams,
     DisplayParams, PlotRequest,
 )

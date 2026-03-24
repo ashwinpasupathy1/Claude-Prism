@@ -59,7 +59,7 @@ def _start_server(port: int) -> threading.Thread:
     Imports plotter_server at call time so the module-level _PORT override
     takes effect before uvicorn binds.
     """
-    import plotter_server as _srv
+    from refraction.server import api as _srv
 
     # Override the module-level port so get_port() returns the right value.
     _srv._PORT = port  # noqa: SLF001

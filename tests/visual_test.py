@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from PIL import Image
 
-import plotter_functions as pf
+from refraction.core import chart_helpers as pf
 pf._ensure_imports()
 
 OUT_DIR = os.path.join(os.path.dirname(__file__), "visual_output")

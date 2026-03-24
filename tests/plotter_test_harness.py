@@ -26,17 +26,14 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-# ── Locate plotter_functions ────────────────────────────────────────────────────
+# ── Locate refraction package ──────────────────────────────────────────────────
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_LEGACY_SRC = os.path.join(_HERE, "claude_plotter_src")
+_PROJECT_ROOT = os.path.dirname(_HERE)
 
-for _candidate in (_HERE, _LEGACY_SRC):
-    if os.path.isfile(os.path.join(_candidate, "plotter_functions.py")):
-        if _candidate not in sys.path:
-            sys.path.insert(0, _candidate)
-        break
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
-import plotter_functions as pf  # noqa: E402
+from refraction.core import chart_helpers as pf  # noqa: E402
 
 # Re-export key constants so test files can access them via the harness
 PLOT_PARAM_DEFAULTS = pf.PLOT_PARAM_DEFAULTS

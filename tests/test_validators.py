@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import plotter_test_harness as _h
 from plotter_test_harness import ok, fail, run, section, summarise
 
-from plotter_validators import (
+from refraction.core.validators import (
     validate_flat_header,
     validate_bar,
     validate_line,

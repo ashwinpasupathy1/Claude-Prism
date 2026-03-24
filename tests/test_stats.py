@@ -540,7 +540,7 @@ section("Two-way post-hoc — Welch's t-test (equal_var=False)")
 
 def test_twoway_posthoc_welch():
     """Two-way post-hoc p-values match scipy Welch t-test (equal_var=False)."""
-    from plotter_functions import _twoway_posthoc
+    from refraction.core.chart_helpers import _twoway_posthoc
     df = _make_twoway_df()
     results = _twoway_posthoc(df, "Y", "A", "B", correction="none")
     for row in results:

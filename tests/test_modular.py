@@ -54,7 +54,7 @@ def _grouped_df(cats, subs, n_rows=4, seed=0):
 # ═════════════════════════════════════════════════════════════════════════════
 section("prism_widgets: module structure")
 
-import plotter_widgets as pw
+from refraction.app import widgets as pw
 
 
 def test_ds_has_primary():
@@ -215,7 +215,7 @@ run("_DS font constants are non-empty tuples", test_ds_font_tuples)
 # ═════════════════════════════════════════════════════════════════════════════
 section("prism_validators: flat-header")
 
-import plotter_validators as pv
+from refraction.core import validators as pv
 
 
 def test_validate_bar_valid():
@@ -504,7 +504,7 @@ run("All validators return (errors_list, warnings_list) for any input",
 # ═════════════════════════════════════════════════════════════════════════════
 section("prism_results: module structure")
 
-import plotter_results as pr
+from refraction.app import results as pr
 
 
 def test_results_has_populate():
@@ -598,8 +598,8 @@ run("Utility functions in prism_widgets all have docstrings",
 section("prism_tabs: TabState defaults")
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-import plotter_tabs as pt
-from plotter_tabs import TabState, TabManager, TabBar, draw_tab_icon
+from refraction.core import tabs as pt
+from refraction.core.tabs import TabState, TabManager, TabBar, draw_tab_icon
 
 # Check display availability once so all Tk-dependent tests can skip gracefully
 import tkinter as _tk_check

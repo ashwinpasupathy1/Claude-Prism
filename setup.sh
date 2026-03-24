@@ -96,8 +96,9 @@ verify() {
 
     # Quick import check
     python3 -c "
-import plotter_functions, plotter_widgets, plotter_validators, plotter_results
-import plotter_server
+from refraction.core import chart_helpers, validators
+from refraction.app import widgets, results
+from refraction.server import api
 print('  Python modules: OK')
 " 2>&1 || { err "Python module import failed"; exit 1; }
 
@@ -111,13 +112,13 @@ print('  Python modules: OK')
     echo ""
     echo "  To run:"
     if [[ "$MODE" == "desktop" ]]; then
-        echo "    python3 plotter_barplot_app.py"
+        echo "    python3 plotter_desktop.py"
     elif [[ "$MODE" == "web" ]]; then
-        echo "    python3 plotter_web_server.py"
+        echo "    python3 -m refraction.server.web_entry"
         echo "    Open http://localhost:7331"
     else
-        echo "    Desktop:  python3 plotter_barplot_app.py"
-        echo "    Web:      python3 plotter_web_server.py → http://localhost:7331"
+        echo "    Desktop:  python3 plotter_desktop.py"
+        echo "    Web:      python3 -m refraction.server.web_entry → http://localhost:7331"
     fi
     echo ""
 }

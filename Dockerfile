@@ -7,8 +7,8 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy all plotter modules
-COPY plotter_*.py ./
+# Copy refraction package
+COPY refraction/ ./refraction/
 
 # Copy built React SPA (build with: cd plotter_web && npm run build)
 COPY plotter_web/dist ./plotter_web/dist/
@@ -21,4 +21,4 @@ RUN pip install --no-cache-dir \
 EXPOSE 7331
 
 # Run FastAPI server (web-only mode, no Tk)
-CMD ["python3", "-c", "from plotter_server import _make_app; import uvicorn; uvicorn.run(_make_app(), host='0.0.0.0', port=7331)"]
+CMD ["python3", "-c", "from refraction.server.api import _make_app; import uvicorn; uvicorn.run(_make_app(), host='0.0.0.0', port=7331)"]

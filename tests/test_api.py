@@ -28,7 +28,7 @@ from plotter_test_harness import (
 )
 
 # ── Import FastAPI app and test client ──────────────────────────────────────
-from plotter_server import _make_app
+from refraction.server.api import _make_app
 
 try:
     from starlette.testclient import TestClient
