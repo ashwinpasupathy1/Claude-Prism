@@ -27,10 +27,8 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import plotter_test_harness as _h
-from plotter_test_harness import ok, fail, run, section, summarise
 
-pf = _h.pf  # refraction.core.chart_helpers
+from refraction.core import chart_helpers as pf
 
 from scipy import stats as sp_stats
 
@@ -56,7 +54,6 @@ rng = np.random.default_rng(314159)
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 1 — _run_stats dispatcher: full path coverage
 # ══════════════════════════════════════════════════════════════════════════════
-section("1. _run_stats dispatcher — full path coverage")
 
 # ── Welch t-test (parametric, k=2) ────────────────────────────────────────
 def test_welch_ttest_vs_scipy():
@@ -69,7 +66,6 @@ def test_welch_ttest_vs_scipy():
     _, p_scipy = sp_stats.ttest_ind(a, b, equal_var=False)
     assert abs(p_ours - p_scipy) < 1e-12, f"Welch: {p_ours} vs {p_scipy}"
 
-run("1a. Welch t-test p matches scipy (unequal n)", test_welch_ttest_vs_scipy)
 
 
 # ── Student t-test would be equal_var=True; production uses Welch (equal_var=False)
@@ -90,7 +86,6 @@ def test_parametric_is_welch_not_student():
     assert abs(p_ours - p_welch) < abs(p_ours - p_student) or \
            abs(p_welch - p_student) < 1e-12  # equal var → same result
 
-run("1b. Parametric k=2 uses Welch (not Student) t-test", test_parametric_is_welch_not_student)
 
 
 # ── Paired t-test (k=2) ──────────────────────────────────────────────────
@@ -104,7 +99,6 @@ def test_paired_ttest_k2_vs_scipy():
     _, p_scipy = sp_stats.ttest_rel(pre, post)
     assert abs(p_ours - p_scipy) < 1e-12, f"Paired: {p_ours} vs {p_scipy}"
 
-run("1c. Paired t-test (k=2) p matches scipy.stats.ttest_rel", test_paired_ttest_k2_vs_scipy)
 
 
 # ── Paired t-test (k>2, pairwise) ────────────────────────────────────────
@@ -129,7 +123,6 @@ def test_paired_ttest_k3_pairwise():
         assert abs(p_ours - p_scipy) < 1e-12, \
             f"Paired {x_name}-{y_name}: {p_ours} vs {p_scipy}"
 
-run("1d. Paired t-test (k=3) all pairwise p-values match scipy", test_paired_ttest_k3_pairwise)
 
 
 # ── Mann-Whitney U (nonparametric, k=2) ──────────────────────────────────
@@ -143,7 +136,6 @@ def test_mannwhitney_vs_scipy():
     _, p_scipy = sp_stats.mannwhitneyu(a, b, alternative="two-sided")
     assert abs(p_ours - p_scipy) < 1e-12, f"MWU: {p_ours} vs {p_scipy}"
 
-run("1e. Mann-Whitney U p matches scipy (unequal n)", test_mannwhitney_vs_scipy)
 
 
 # ── Kruskal-Wallis + Dunn's (nonparametric, k>2) ─────────────────────────
@@ -161,7 +153,6 @@ def test_kruskal_wallis_triggers_posthoc():
                      mc_correction="None (uncorrected)")
     assert len(res) == 3, f"Expected 3 Dunn's pairs, got {len(res)}"
 
-run("1f. Kruskal-Wallis significant → Dunn's posthoc runs (3 pairs)", test_kruskal_wallis_triggers_posthoc)
 
 
 # ── One-way ANOVA + Tukey HSD (parametric, k>2) ──────────────────────────
@@ -176,7 +167,6 @@ def test_anova_tukey_triggers():
                      mc_correction="None (uncorrected)")
     assert len(res) == 3
 
-run("1g. ANOVA significant → Tukey HSD returns 3 pairs", test_anova_tukey_triggers)
 
 
 # ── ANOVA non-significant → empty results ────────────────────────────────
@@ -192,7 +182,6 @@ def test_anova_ns_returns_empty():
     res = _run_stats(groups, test_type="parametric", posthoc="Tukey HSD")
     assert res == [], f"Non-significant ANOVA should return empty, got {res}"
 
-run("1h. ANOVA non-significant → empty results (Tukey gate)", test_anova_ns_returns_empty)
 
 
 # ── KW non-significant → empty results ───────────────────────────────────
@@ -207,7 +196,6 @@ def test_kw_ns_returns_empty():
     res = _run_stats(groups, test_type="nonparametric")
     assert res == [], f"Non-significant KW should return empty, got {res}"
 
-run("1i. Kruskal-Wallis non-significant → empty results", test_kw_ns_returns_empty)
 
 
 # ── One-sample t-test ─────────────────────────────────────────────────────
@@ -221,7 +209,6 @@ def test_one_sample_ttest_vs_scipy():
     _, p_scipy = sp_stats.ttest_1samp(data, popmean=mu0)
     assert abs(p_ours - p_scipy) < 1e-12
 
-run("1j. One-sample t-test p matches scipy.stats.ttest_1samp", test_one_sample_ttest_vs_scipy)
 
 
 # ── One-sample t-test with multiple groups ────────────────────────────────
@@ -239,7 +226,6 @@ def test_one_sample_multi_group():
     assert abs(p1 - p1_scipy) < 1e-12
     assert abs(p2 - p2_scipy) < 1e-12
 
-run("1k. One-sample t-test: multiple groups each tested independently", test_one_sample_multi_group)
 
 
 # ── Permutation test (k=2) ───────────────────────────────────────────────
@@ -256,7 +242,6 @@ def test_permutation_k2():
     # Large separation → should be significant
     assert p < 0.05, f"Permutation: large separation should be significant, p={p}"
 
-run("1l. Permutation test (k=2) detects large separation", test_permutation_k2)
 
 
 # ── Fewer than 2 groups → empty ──────────────────────────────────────────
@@ -265,7 +250,6 @@ def test_single_group_returns_empty():
     res = _run_stats(groups, test_type="parametric")
     assert res == []
 
-run("1m. Single group → empty results (k<2)", test_single_group_returns_empty)
 
 
 # ── Parametric posthoc: Bonferroni ────────────────────────────────────────
@@ -278,7 +262,6 @@ def test_posthoc_bonferroni():
                      mc_correction="Bonferroni")
     assert len(res) == 3
 
-run("1n. Parametric posthoc=Bonferroni returns 3 pairs", test_posthoc_bonferroni)
 
 
 # ── Parametric posthoc: Sidak ─────────────────────────────────────────────
@@ -295,7 +278,6 @@ def test_posthoc_sidak():
     for _, _, p, _ in res:
         assert 0 <= p <= 1
 
-run("1o. Parametric posthoc=Sidak returns valid p-values", test_posthoc_sidak)
 
 
 # ── Parametric posthoc: Fisher LSD ───────────────────────────────────────
@@ -317,7 +299,6 @@ def test_posthoc_fisher_lsd():
         assert abs(p_ours - p_scipy) < 1e-12, \
             f"Fisher LSD {x_name}-{y_name}: {p_ours} vs {p_scipy}"
 
-run("1p. Fisher LSD p-values match raw Welch t-test (no correction)", test_posthoc_fisher_lsd)
 
 
 # ── Dunnett (parametric, k>2) ────────────────────────────────────────────
@@ -342,13 +323,11 @@ def test_dunnett_vs_scipy():
         op = our_p_map[trt_name]
         assert abs(op - sp) < 1e-10, f"Dunnett {trt_name}: {op} vs {sp}"
 
-run("1q. Dunnett p-values match scipy.stats.dunnett exactly", test_dunnett_vs_scipy)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 2 — Posthoc tests: full coverage
 # ══════════════════════════════════════════════════════════════════════════════
-section("2. Posthoc tests — full coverage")
 
 
 # ── Tukey HSD: verify p via studentized range ─────────────────────────────
@@ -375,7 +354,6 @@ def test_tukey_pvalues_vs_studentized_range():
         assert abs(p_ours - p_manual) < 1e-10, \
             f"Tukey {g1}-{g2}: {p_ours} vs {p_manual}"
 
-run("2a. Tukey HSD: all pairwise p-values match studentized_range CDF", test_tukey_pvalues_vs_studentized_range)
 
 
 # ── Dunn's test: verify z-statistic formula ───────────────────────────────
@@ -404,7 +382,6 @@ def test_dunns_z_formula():
         assert abs(p_ours - p_manual) < 1e-10, \
             f"Dunn {g1}-{g2}: {p_ours} vs {p_manual}"
 
-run("2b. Dunn's posthoc: z-statistics and p-values match manual computation", test_dunns_z_formula)
 
 
 # ── Sidak correction formula ─────────────────────────────────────────────
@@ -429,13 +406,11 @@ def test_sidak_correction_formula():
         assert abs(p_sidak_got - p_sidak_expected) < 1e-10, \
             f"Sidak {pair}: got {p_sidak_got}, expected {p_sidak_expected}"
 
-run("2c. Sidak correction formula verified: p_corr = 1-(1-p)^m", test_sidak_correction_formula)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 3 — Multiple comparison corrections (pipeline integration)
 # ══════════════════════════════════════════════════════════════════════════════
-section("3. Multiple comparison corrections — pipeline integration")
 
 
 # ── Bonferroni in pipeline ────────────────────────────────────────────────
@@ -447,7 +422,6 @@ def test_bonferroni_pipeline():
         expected = min(r * m, 1.0)
         assert abs(c - expected) < 1e-12, f"Bonferroni[{i}]: {c} vs {expected}"
 
-run("3a. Bonferroni: p_corr = min(p * m, 1.0)", test_bonferroni_pipeline)
 
 
 # ── Holm-Bonferroni step-down ─────────────────────────────────────────────
@@ -466,7 +440,6 @@ def test_holm_step_down():
         assert abs(corrected[i] - expected[i]) < 1e-12, \
             f"Holm[{i}]: {corrected[i]} vs {expected[i]}"
 
-run("3b. Holm-Bonferroni: step-down ordering verified", test_holm_step_down)
 
 
 # ── Holm monotonicity (sorted input) ─────────────────────────────────────
@@ -476,7 +449,6 @@ def test_holm_monotone_sorted():
     for i in range(len(corrected) - 1):
         assert corrected[i] <= corrected[i+1] + 1e-12
 
-run("3c. Holm-Bonferroni: monotonic for sorted input", test_holm_monotone_sorted)
 
 
 # ── Benjamini-Hochberg step-up ────────────────────────────────────────────
@@ -496,7 +468,6 @@ def test_bh_step_up():
         assert abs(corrected[i] - expected[i]) < 1e-12, \
             f"BH[{i}]: {corrected[i]} vs {expected[i]}"
 
-run("3d. Benjamini-Hochberg: step-up ordering and q-values verified", test_bh_step_up)
 
 
 # ── Corrections applied to posthoc (not omnibus) p-values ────────────────
@@ -521,7 +492,6 @@ def test_correction_applied_to_posthoc_not_omnibus():
         assert abs(bp - expected) < 1e-10, \
             f"Bonferroni pipeline: got {bp}, expected {expected} (raw={rp})"
 
-run("3e. Correction applied to posthoc p-values (not omnibus)", test_correction_applied_to_posthoc_not_omnibus)
 
 
 # ── None (uncorrected) passes through ────────────────────────────────────
@@ -531,7 +501,6 @@ def test_uncorrected_passthrough():
     for r, c in zip(raw_p, corrected):
         assert abs(r - c) < 1e-12
 
-run("3f. None (uncorrected): p-values unchanged", test_uncorrected_passthrough)
 
 
 # ── Empty list ────────────────────────────────────────────────────────────
@@ -539,13 +508,11 @@ def test_correction_empty_list():
     for method in ("Bonferroni", "Holm-Bonferroni", "Benjamini-Hochberg (FDR)"):
         assert _apply_correction([], method) == []
 
-run("3g. All corrections handle empty list", test_correction_empty_list)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 4 — Effect sizes (exhaustive)
 # ══════════════════════════════════════════════════════════════════════════════
-section("4. Effect sizes — exhaustive verification")
 
 
 # ── Cohen's d: manual pooled SD computation ───────────────────────────────
@@ -563,7 +530,6 @@ def test_cohens_d_manual_3_datasets():
         d_manual = (np.mean(a) - np.mean(b)) / s_pooled if s_pooled > 0 else float('nan')
         assert abs(d - d_manual) < 1e-12, f"Cohen d: {d} vs {d_manual}"
 
-run("4a. Cohen's d: formula verified for 3 datasets", test_cohens_d_manual_3_datasets)
 
 
 # ── Cohen's d: zero variance returns NaN ──────────────────────────────────
@@ -573,7 +539,6 @@ def test_cohens_d_zero_variance():
     d = _cohens_d(a, b)
     assert np.isnan(d), f"Expected NaN for zero variance, got {d}"
 
-run("4b. Cohen's d: zero variance → NaN", test_cohens_d_zero_variance)
 
 
 # ── Hedges' g: bias correction factor J(m) ───────────────────────────────
@@ -592,7 +557,6 @@ def test_hedges_g_correction_factor():
         expected = d * J
         assert abs(g - expected) < 1e-12, f"Hedges g: {g} vs {expected}"
 
-run("4c. Hedges' g: J(m)=1-3/(4m-1) verified for 3 datasets", test_hedges_g_correction_factor)
 
 
 # ── Hedges' g: converges to Cohen's d for large n ────────────────────────
@@ -604,7 +568,6 @@ def test_hedges_g_large_n():
     # J = 1 - 3/(4*1998 - 1) ≈ 0.99962
     assert abs(g - d) / (abs(d) + 1e-9) < 0.001
 
-run("4d. Hedges' g: converges to Cohen's d for n=1000", test_hedges_g_large_n)
 
 
 # ── Rank-biserial r: verify formula r = (U1-U2)/(n1*n2) ─────────────────
@@ -622,7 +585,6 @@ def test_rank_biserial_formula():
         r_manual = (U1 - U2) / (n1 * n2)
         assert abs(r - r_manual) < 1e-12, f"Rank-biserial: {r} vs {r_manual}"
 
-run("4e. Rank-biserial r: formula (U1-U2)/(n1*n2) verified", test_rank_biserial_formula)
 
 
 # ── Eta-squared: Two-way ANOVA η² = SS_effect / SS_total ─────────────────
@@ -646,7 +608,6 @@ def test_eta_squared_formula():
         expected = result[key]["SS"] / ss_total
         assert abs(eta2 - expected) < 1e-12, f"{key}: η²={eta2} vs {expected}"
 
-run("4f. Eta-squared: η²=SS_effect/SS_total verified", test_eta_squared_formula)
 
 
 # ── Partial eta-squared: η²_p = SS_effect / (SS_effect + SS_error) ───────
@@ -670,7 +631,6 @@ def test_partial_eta_squared_formula():
         assert abs(eta2_p - expected) < 1e-12, \
             f"{key}: η²_p={eta2_p} vs {expected}"
 
-run("4g. Partial eta-squared: η²_p=SS/(SS+SS_err) verified", test_partial_eta_squared_formula)
 
 
 # ── Two-way ANOVA: F = MS_effect / MS_error ──────────────────────────────
@@ -691,7 +651,6 @@ def test_twoway_F_formula():
         expected_F = ms_eff / ms_err
         assert abs(F - expected_F) < 1e-10, f"{key}: F={F} vs {expected_F}"
 
-run("4h. Two-way ANOVA: F = MS_effect / MS_error verified", test_twoway_F_formula)
 
 
 # ── Two-way ANOVA p from F distribution ──────────────────────────────────
@@ -713,13 +672,11 @@ def test_twoway_p_from_F():
         p_expected = float(sp_stats.f.sf(F, df_eff, df_err))
         assert abs(p - p_expected) < 1e-12, f"{key}: p={p} vs {p_expected}"
 
-run("4i. Two-way ANOVA: p matches scipy.stats.f.sf", test_twoway_p_from_F)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 5 — Permutation tests
 # ══════════════════════════════════════════════════════════════════════════════
-section("5. Permutation tests")
 
 
 # ── Permutation converges to parametric p for large effect ────────────────
@@ -736,7 +693,6 @@ def test_permutation_converges_to_parametric():
     assert abs(p_perm - p_welch) < 0.02, \
         f"Permutation p={p_perm} vs Welch p={p_welch}, diff > 0.02"
 
-run("5a. Permutation p converges to Welch p (large effect, n=20)", test_permutation_converges_to_parametric)
 
 
 # ── Permutation on null data → p > 0.3 ───────────────────────────────────
@@ -750,7 +706,6 @@ def test_permutation_null():
     _, _, p, _ = res[0]
     assert p > 0.1, f"Null data permutation p={p} should be > 0.1"
 
-run("5b. Permutation on null data: p not significant", test_permutation_null)
 
 
 # ── Permutation with k>2 ─────────────────────────────────────────────────
@@ -770,13 +725,11 @@ def test_permutation_k3():
             p_ac = p
     assert p_ac is not None and p_ac < 0.05
 
-run("5c. Permutation (k=3): 3 pairs, A vs C significant", test_permutation_k3)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 6 — NaN / missing data handling
 # ══════════════════════════════════════════════════════════════════════════════
-section("6. NaN / missing data handling")
 
 
 # ── _calc_error with NaN values ───────────────────────────────────────────
@@ -788,7 +741,6 @@ def test_calc_error_ignores_nan_not():
     # np.mean([1,2,3,nan,5]) = nan, so m should be nan
     assert np.isnan(m), "Mean of data with NaN should be NaN"
 
-run("6a. _calc_error with NaN: mean is NaN (caller must clean)", test_calc_error_ignores_nan_not)
 
 
 # ── normality check with NaN ─────────────────────────────────────────────
@@ -800,7 +752,6 @@ def test_check_normality_drops_nan():
     assert stat is not None, "Should compute Shapiro-Wilk after dropping NaN"
     assert isinstance(p, float)
 
-run("6b. check_normality drops NaN before Shapiro-Wilk", test_check_normality_drops_nan)
 
 
 # ── check_normality with all NaN ─────────────────────────────────────────
@@ -812,7 +763,6 @@ def test_check_normality_all_nan():
     assert stat is None, "All-NaN group: stat should be None (too few)"
     assert "too few" in msg.lower()
 
-run("6c. check_normality: all-NaN group handled gracefully", test_check_normality_all_nan)
 
 
 # ── check_normality with n<3 after NaN drop ──────────────────────────────
@@ -822,13 +772,11 @@ def test_check_normality_small_n():
     stat, p, is_normal, msg = result["G"]
     assert stat is None, "n=2 should be too few for Shapiro-Wilk"
 
-run("6d. check_normality: n=2 after NaN drop → too few", test_check_normality_small_n)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 7 — Edge cases with ground truth
 # ══════════════════════════════════════════════════════════════════════════════
-section("7. Edge cases with ground truth")
 
 
 # ── Identical groups: p ≈ 1.0, effect size = 0 ───────────────────────────
@@ -840,7 +788,6 @@ def test_identical_groups_welch():
     _, _, p, _ = res[0]
     assert p > 0.99, f"Identical groups: p={p} should be ~1.0"
 
-run("7a. Identical groups: Welch p ≈ 1.0", test_identical_groups_welch)
 
 
 def test_identical_groups_effect_size_zero():
@@ -848,7 +795,6 @@ def test_identical_groups_effect_size_zero():
     d = _cohens_d(x, x.copy())
     assert d == 0.0, f"Identical groups: d={d} should be 0"
 
-run("7b. Identical groups: Cohen's d = 0", test_identical_groups_effect_size_zero)
 
 
 # ── Perfect separation ───────────────────────────────────────────────────
@@ -863,7 +809,6 @@ def test_perfect_separation():
     d = abs(_cohens_d(a, b))
     assert d > 10, f"Perfect separation: |d|={d} should be very large"
 
-run("7c. Perfect separation: p very small, |d| very large", test_perfect_separation)
 
 
 # ── n=2 per group ────────────────────────────────────────────────────────
@@ -878,7 +823,6 @@ def test_n2_per_group():
     assert abs(p_ours - p_scipy) < 1e-12
     assert not np.isnan(p_ours)
 
-run("7d. n=2 per group: Welch t-test works, matches scipy", test_n2_per_group)
 
 
 # ── n=1 per group: Cohen's d = NaN ──────────────────────────────────────
@@ -888,7 +832,6 @@ def test_n1_cohens_d_nan():
     d = _cohens_d(a, b)
     assert np.isnan(d), f"n=1: d={d} should be NaN"
 
-run("7e. n=1 per group: Cohen's d returns NaN", test_n1_cohens_d_nan)
 
 
 # ── Unequal group sizes ──────────────────────────────────────────────────
@@ -902,7 +845,6 @@ def test_unequal_sizes():
     _, p_scipy = sp_stats.ttest_ind(a, b, equal_var=False)
     assert abs(p_ours - p_scipy) < 1e-12
 
-run("7f. Unequal group sizes (5 vs 20): Welch p matches scipy", test_unequal_sizes)
 
 
 # ── Negative values ──────────────────────────────────────────────────────
@@ -916,7 +858,6 @@ def test_negative_values():
     _, p_scipy = sp_stats.ttest_ind(a, b, equal_var=False)
     assert abs(p_ours - p_scipy) < 1e-12
 
-run("7g. Negative values: stats work correctly", test_negative_values)
 
 
 # ── Very large values (1e12) ─────────────────────────────────────────────
@@ -931,7 +872,6 @@ def test_very_large_values():
     assert abs(p_ours - p_scipy) < 1e-12
     assert not np.isnan(p_ours) and not np.isinf(p_ours)
 
-run("7h. Very large values (1e12): no overflow, matches scipy", test_very_large_values)
 
 
 # ── Very small differences ───────────────────────────────────────────────
@@ -945,7 +885,6 @@ def test_very_small_differences():
     _, p_scipy = sp_stats.ttest_ind(a, b, equal_var=False)
     assert abs(p_ours - p_scipy) < 1e-10
 
-run("7i. Very small differences: precision maintained", test_very_small_differences)
 
 
 # ── Mann-Whitney identical groups ─────────────────────────────────────────
@@ -957,13 +896,11 @@ def test_mw_identical():
     _, _, p, _ = res[0]
     assert p > 0.5, f"Identical groups MWU: p={p} should be > 0.5"
 
-run("7j. Mann-Whitney on identical groups: p > 0.5", test_mw_identical)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 8 — Control group logic (full path)
 # ══════════════════════════════════════════════════════════════════════════════
-section("8. Control group logic — full path")
 
 
 # ── Control produces k-1 comparisons ─────────────────────────────────────
@@ -980,7 +917,6 @@ def test_control_k_minus_1():
         assert len(res) == k - 1, \
             f"k={k}: expected {k-1} comparisons, got {len(res)}"
 
-run("8a. Control group: k-1 comparisons for k groups", test_control_k_minus_1)
 
 
 # ── Control filter works for all test types ──────────────────────────────
@@ -1000,7 +936,6 @@ def test_control_all_test_types():
         assert frozenset(["A", "B"]) not in pairs, \
             f"{tt}: A vs B leaked through"
 
-run("8b. Control filter: works for parametric/nonparametric/permutation", test_control_all_test_types)
 
 
 # ── Dunnett with control=None defaults to first group ────────────────────
@@ -1014,7 +949,6 @@ def test_dunnett_default_control():
     for g1, g2, p, _ in res:
         assert "X" in (g1, g2), f"Default control should be 'X', got ({g1}, {g2})"
 
-run("8c. Dunnett control=None: defaults to first group", test_dunnett_default_control)
 
 
 # ── Control that doesn't exist: Tukey still runs (stale control) ─────────
@@ -1029,7 +963,6 @@ def test_stale_control_tukey():
     # OR it falls back to all pairs — test that it doesn't crash
     assert isinstance(res, list)
 
-run("8d. Stale control: does not crash", test_stale_control_tukey)
 
 
 # ── One-sample t-test with correction applied correctly ──────────────────
@@ -1046,13 +979,11 @@ def test_one_sample_with_correction():
     for i, (_, _, p, _) in enumerate(res):
         assert abs(p - expected[i]) < 1e-12
 
-run("8e. One-sample t-test: Bonferroni correction applied correctly", test_one_sample_with_correction)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 9 — normality_warning / check_normality
 # ══════════════════════════════════════════════════════════════════════════════
-section("9. normality_warning / check_normality")
 
 
 # ── Normal data: no warning ──────────────────────────────────────────────
@@ -1065,7 +996,6 @@ def test_normality_normal_data_no_warning():
     assert p > 0.05, f"Normal data should pass Shapiro-Wilk, p={p}"
     assert is_normal is True
 
-run("9a. Normal data (n=50): Shapiro-Wilk passes, no warning", test_normality_normal_data_no_warning)
 
 
 # ── Skewed data: warning ─────────────────────────────────────────────────
@@ -1078,7 +1008,6 @@ def test_normality_skewed_data_warns():
     assert is_normal is False
     assert msg is not None and "non-normal" in msg.lower()
 
-run("9b. Skewed data (exponential): Shapiro-Wilk fails, warns", test_normality_skewed_data_warns)
 
 
 # ── normality_warning: only for parametric ────────────────────────────────
@@ -1096,7 +1025,6 @@ def test_normality_warning_only_parametric():
     assert len(w_para) > 0, "Should warn for parametric"
     assert w_nonp == "", "Should not warn for nonparametric"
 
-run("9c. normality_warning: warns for parametric only", test_normality_warning_only_parametric)
 
 
 # ── normality_warning disabled ────────────────────────────────────────────
@@ -1111,7 +1039,6 @@ def test_normality_warning_disabled():
         pf.__show_normality_warning__ = old
     assert w == "", "Warning should be empty when disabled"
 
-run("9d. normality_warning: empty when disabled", test_normality_warning_disabled)
 
 
 # ── check_normality: Shapiro p threshold = 0.05 ──────────────────────────
@@ -1124,7 +1051,6 @@ def test_check_normality_threshold():
     expected_normal = p > 0.05
     assert is_normal == expected_normal
 
-run("9e. check_normality: threshold at α=0.05", test_check_normality_threshold)
 
 
 # ── check_normality with custom alpha ────────────────────────────────────
@@ -1139,13 +1065,11 @@ def test_check_normality_custom_alpha():
     assert result_strict["G"][0] is not None  # stat computed
     assert result_lenient["G"][0] is not None
 
-run("9f. check_normality: custom alpha accepted", test_check_normality_custom_alpha)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 10 — _calc_error and _calc_error_asymmetric
 # ══════════════════════════════════════════════════════════════════════════════
-section("10. _calc_error and _calc_error_asymmetric")
 
 
 # ── SEM = std / sqrt(n) ──────────────────────────────────────────────────
@@ -1158,7 +1082,6 @@ def test_calc_error_sem():
     assert abs(m - np.mean(vals)) < 1e-12
     assert abs(err - expected_sem) < 1e-12
 
-run("10a. SEM = std(ddof=1) / sqrt(n)", test_calc_error_sem)
 
 
 # ── SD = std(ddof=1) ─────────────────────────────────────────────────────
@@ -1167,7 +1090,6 @@ def test_calc_error_sd():
     m, err = _calc_error(vals, "sd")
     assert abs(err - np.std(vals, ddof=1)) < 1e-12
 
-run("10b. SD matches numpy std(ddof=1)", test_calc_error_sd)
 
 
 # ── CI95 = t_crit * SEM ──────────────────────────────────────────────────
@@ -1180,7 +1102,6 @@ def test_calc_error_ci95():
     expected_ci = t_crit * s / np.sqrt(n)
     assert abs(err - expected_ci) < 1e-10
 
-run("10c. CI95 = t_crit(0.975, n-1) * SEM", test_calc_error_ci95)
 
 
 # ── CI95 with different n ────────────────────────────────────────────────
@@ -1193,7 +1114,6 @@ def test_calc_error_ci95_various_n():
         expected = t_crit * s / np.sqrt(n)
         assert abs(err - expected) < 1e-10, f"n={n}: CI95 mismatch"
 
-run("10d. CI95 correct for n=3,5,10,50", test_calc_error_ci95_various_n)
 
 
 # ── n=1: SEM should be 0 (ddof=1 std with n=1 → 0 because std guard) ────
@@ -1207,7 +1127,6 @@ def test_calc_error_n1():
     assert e_sem == 0.0, f"SEM with n=1: got {e_sem}"
     assert e_sd == 0.0, f"SD with n=1: got {e_sd}"
 
-run("10e. n=1: SEM and SD are 0 (no crash)", test_calc_error_n1)
 
 
 # ── All identical values: error = 0 ──────────────────────────────────────
@@ -1218,7 +1137,6 @@ def test_calc_error_identical():
         assert abs(m - 7.0) < 1e-12
         assert abs(err) < 1e-12, f"{etype}: error should be 0 for identical values"
 
-run("10f. All identical values: error = 0 for SEM/SD/CI95", test_calc_error_identical)
 
 
 # ── Asymmetric error: positive mean ──────────────────────────────────────
@@ -1231,7 +1149,6 @@ def test_calc_error_asymmetric_positive():
     # Lower bar should be <= mean (can't extend through zero)
     assert lo <= m * 0.9999 + 1e-12
 
-run("10g. Asymmetric error: lo >= 0, hi >= 0, lo < mean", test_calc_error_asymmetric_positive)
 
 
 # ── Asymmetric error: negative mean falls back to symmetric ──────────────
@@ -1244,7 +1161,6 @@ def test_calc_error_asymmetric_negative_mean():
     assert abs(lo - half) < 1e-12
     assert abs(hi - half) < 1e-12
 
-run("10h. Asymmetric error: negative mean → symmetric fallback", test_calc_error_asymmetric_negative_mean)
 
 
 # ── Asymmetric error types consistency ────────────────────────────────────
@@ -1256,13 +1172,11 @@ def test_calc_error_asymmetric_all_types():
         assert lo >= 0
         assert hi >= 0
 
-run("10i. Asymmetric error: all types (SEM/SD/CI95) produce valid bounds", test_calc_error_asymmetric_all_types)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 11 — Log-rank test
 # ══════════════════════════════════════════════════════════════════════════════
-section("11. Log-rank test — additional verification")
 
 
 # ── Log-rank: non-overlapping survival → significant ─────────────────────
@@ -1276,7 +1190,6 @@ def test_logrank_non_overlapping():
     _, _, p, _ = res[0]
     assert p < 0.05, f"Non-overlapping survival: p={p} should be < 0.05"
 
-run("11a. Log-rank: non-overlapping survival → significant", test_logrank_non_overlapping)
 
 
 # ── Log-rank: identical → p ≈ 1 ──────────────────────────────────────────
@@ -1288,7 +1201,6 @@ def test_logrank_identical():
     _, _, p, _ = res[0]
     assert p > 0.99, f"Identical survival: p={p} should be ~1"
 
-run("11b. Log-rank: identical survival → p ≈ 1", test_logrank_identical)
 
 
 # ── Log-rank: 3 groups → 3 pairwise comparisons ─────────────────────────
@@ -1301,13 +1213,11 @@ def test_logrank_3_groups():
     res = _logrank_test(groups_dict)
     assert len(res) == 3, f"Expected 3 pairwise, got {len(res)}"
 
-run("11c. Log-rank: 3 groups → 3 pairwise comparisons", test_logrank_3_groups)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 12 — Two-way ANOVA and posthoc
 # ══════════════════════════════════════════════════════════════════════════════
-section("12. Two-way ANOVA — additional verification")
 
 
 # ── Type III SS: each SS_effect > 0 for real effects, SS_err > 0 ─────────
@@ -1338,7 +1248,6 @@ def test_twoway_ss_properties():
     assert result["A"]["p"] < 0.05
     assert result["B"]["p"] < 0.05
 
-run("12a. Two-way ANOVA: Type III SS properties (SS > 0 for real effects)", test_twoway_ss_properties)
 
 
 # ── Two-way posthoc: Holm correction applied ─────────────────────────────
@@ -1358,7 +1267,6 @@ def test_twoway_posthoc_holm():
     for rp, cp in zip(raw_ps, corr_ps):
         assert cp >= rp - 1e-12, f"Holm p_corr={cp} < p_raw={rp}"
 
-run("12b. Two-way posthoc: Holm correction makes p_corr >= p_raw", test_twoway_posthoc_holm)
 
 
 # ── Two-way ANOVA: insufficient replicates raises error ──────────────────
@@ -1374,13 +1282,11 @@ def test_twoway_insufficient_replicates():
     except ValueError as e:
         assert "not enough" in str(e).lower()
 
-run("12c. Two-way ANOVA: 1 rep per cell raises ValueError", test_twoway_insufficient_replicates)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 13 — Tukey HSD: ANOVA gate behavior
 # ══════════════════════════════════════════════════════════════════════════════
-section("13. ANOVA / KW gate behavior")
 
 
 def test_tukey_anova_gate_p05():
@@ -1395,7 +1301,6 @@ def test_tukey_anova_gate_p05():
     res = _run_stats(groups, test_type="parametric", posthoc="Tukey HSD")
     assert res == []
 
-run("13a. Tukey HSD: ANOVA gate rejects non-significant F", test_tukey_anova_gate_p05)
 
 
 def test_bonferroni_posthoc_anova_gate():
@@ -1407,13 +1312,11 @@ def test_bonferroni_posthoc_anova_gate():
     res = _run_stats(groups, test_type="parametric", posthoc="Bonferroni")
     assert res == []
 
-run("13b. Bonferroni posthoc: ANOVA gate rejects non-significant F", test_bonferroni_posthoc_anova_gate)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SECTION 14 — Comprehensive _p_to_stars
 # ══════════════════════════════════════════════════════════════════════════════
-section("14. _p_to_stars comprehensive boundary tests")
 
 
 def test_p_to_stars_all_boundaries():
@@ -1439,12 +1342,8 @@ def test_p_to_stars_all_boundaries():
         got = _p_to_stars(p_val)
         assert got == expected, f"p={p_val}: expected '{expected}', got '{got}'"
 
-run("14a. _p_to_stars: all boundary values correct", test_p_to_stars_all_boundaries)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Summary
 # ─────────────────────────────────────────────────────────────────────────────
-if __name__ == "__main__":
-    summarise("stats_exhaustive")
-    sys.exit(0 if _h.FAIL == 0 else 1)

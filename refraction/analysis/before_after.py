@@ -13,6 +13,7 @@ import pandas as pd
 from refraction.analysis.schema import AxisSpec, ChartSpec, StyleSpec
 from refraction.analysis.helpers import read_data, resolve_colors, extract_config
 from refraction.analysis.stats_annotator import build_stats_brackets
+from refraction.analysis.results import build_results_section
 
 
 def analyze_before_after(kw: dict) -> ChartSpec:
@@ -70,6 +71,9 @@ def analyze_before_after(kw: dict) -> ChartSpec:
         values, cfg["stats_test"], cfg["posthoc"], cfg["correction"]
     )
 
+    # Results section (paired)
+    results = build_results_section(values, paired=True)
+
     return ChartSpec(
         chart_type="before_after",
         title=cfg["title"],
@@ -93,6 +97,7 @@ def analyze_before_after(kw: dict) -> ChartSpec:
             "trajectories": trajectories,
             "means": means,
             "sems": sems,
+            "results": results,
         },
         stats=brackets,
     )

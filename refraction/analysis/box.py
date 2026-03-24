@@ -12,6 +12,7 @@ import numpy as np
 from refraction.analysis.schema import AxisSpec, ChartSpec, StyleSpec
 from refraction.analysis.helpers import read_data, resolve_colors, extract_config
 from refraction.analysis.stats_annotator import build_stats_brackets
+from refraction.analysis.results import build_results_section
 
 
 def _box_stats(vals: list[float]) -> dict:
@@ -71,6 +72,9 @@ def analyze_box(kw: dict) -> ChartSpec:
         values, cfg["stats_test"], cfg["posthoc"], cfg["correction"]
     )
 
+    # Results section
+    results = build_results_section(values)
+
     return ChartSpec(
         chart_type="box",
         title=cfg["title"],
@@ -93,6 +97,7 @@ def analyze_box(kw: dict) -> ChartSpec:
             "groups": groups,
             "box_stats": stats_list,
             "raw_points": raw_points,
+            "results": results,
         },
         stats=brackets,
     )

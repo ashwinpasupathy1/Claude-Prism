@@ -2,6 +2,7 @@
 // Owns the selected chart type, configuration, current spec, and loading state.
 
 import Foundation
+import RefractionRenderer
 
 @Observable
 final class AppState {

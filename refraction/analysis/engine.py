@@ -60,6 +60,30 @@ def analyze(
         * ``title``, ``x_label``, ``y_label``
     """
     cfg = config or {}
+
+    # ------------------------------------------------------------------
+    # Dispatch to dedicated analyzers for chart types that have them
+    # ------------------------------------------------------------------
+    if chart_type in _DEDICATED_ANALYZERS:
+        try:
+            kw = dict(cfg)
+            kw["excel_path"] = excel_path
+            spec = _DEDICATED_ANALYZERS[chart_type](kw)
+            result = spec.to_dict()
+            result["ok"] = True
+            result["chart_type"] = chart_type
+            # Ensure backward-compatible top-level 'groups' key
+            if "groups" not in result and "data" in result:
+                data = result["data"]
+                if "groups" in data:
+                    result["groups"] = data["groups"]
+            return result
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
+
+    # ------------------------------------------------------------------
+    # Generic analysis path (for chart types without dedicated analyzers)
+    # ------------------------------------------------------------------
     sheet = cfg.get("sheet", 0)
     error_type = cfg.get("error_type", "sem")
     stats_test = cfg.get("stats_test", "none")
@@ -153,6 +177,26 @@ def analyze(
         "x_label": x_label,
         "y_label": y_label,
     }
+
+
+# ------------------------------------------------------------------
+# Dedicated analyzer dispatch table
+# ------------------------------------------------------------------
+def _lazy_load_analyzer(module_name: str, func_name: str):
+    """Return a callable that lazily imports and calls the analyzer."""
+    def _call(kw):
+        import importlib
+        mod = importlib.import_module(f"refraction.analysis.{module_name}")
+        return getattr(mod, func_name)(kw)
+    return _call
+
+
+_DEDICATED_ANALYZERS = {
+    "dot_plot": _lazy_load_analyzer("dot_plot", "analyze_dot_plot"),
+    "kaplan_meier": _lazy_load_analyzer("kaplan_meier", "analyze_kaplan_meier"),
+    "forest_plot": _lazy_load_analyzer("forest_plot", "analyze_forest_plot"),
+    "raincloud": _lazy_load_analyzer("raincloud", "analyze_raincloud"),
+}
 
 
 _ALL_CHART_TYPES = sorted([

@@ -12,6 +12,7 @@ import numpy as np
 from refraction.analysis.schema import AxisSpec, ChartSpec, StyleSpec
 from refraction.analysis.helpers import read_data, resolve_colors, extract_config
 from refraction.analysis.stats_annotator import build_stats_brackets, check_normality, _cohens_d
+from refraction.analysis.results import build_results_section
 
 
 def _calc_error(vals: list[float], error_type: str) -> float:
@@ -104,9 +105,13 @@ def analyze_bar(kw_or_path=None, **kwargs) -> ChartSpec:
             if a_vals and b_vals:
                 br.effect_size = _cohens_d(a_vals, b_vals)  # type: ignore[attr-defined]
 
+    # Results section
+    results = build_results_section(values)
+
     chart_data: dict = {
         "groups": group_data,
         "error_type": cfg["error_type"],
+        "results": results,
     }
     if normality_data is not None:
         chart_data["normality"] = normality_data

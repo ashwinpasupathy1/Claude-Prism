@@ -2,6 +2,7 @@
 // using native Core Graphics via the renderer modules.
 
 import SwiftUI
+import RefractionRenderer
 
 struct ChartCanvasView: View {
 
