@@ -1,9 +1,6 @@
 """Plotly theme matching Refraction's matplotlib style."""
 
-PRISM_PALETTE = [
-    "#E8453C", "#2274A5", "#32936F", "#F18F01", "#A846A0",
-    "#6B4226", "#048A81", "#D4AC0D", "#3B1F2B", "#44BBA4",
-]
+from refraction.core.config import PRISM_PALETTE  # noqa: F401 — re-export
 
 PRISM_TEMPLATE = {
     "layout": {
