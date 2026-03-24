@@ -20,6 +20,7 @@ PRISM_TEMPLATE = {
             "ticklen": 5,
             "tickwidth": 1,
             "showline": True,
+            "mirror": False,   # Open spine: bottom axis only
         },
         "yaxis": {
             "showgrid": False,
@@ -30,6 +31,7 @@ PRISM_TEMPLATE = {
             "ticklen": 5,
             "tickwidth": 1,
             "showline": True,
+            "mirror": False,   # Open spine: left axis only
         },
         "margin": {"l": 60, "r": 20, "t": 50, "b": 60},
     }

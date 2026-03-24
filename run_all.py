@@ -14,7 +14,7 @@ Suites:
 
 Usage:
     python3 run_all.py                       # run all suites
-    python3 run_all.py comprehensive         # one suite only
+    python3 run_all.py stats                 # one suite only
     python3 run_all.py stats validators      # two suites
 """
 
@@ -70,8 +70,8 @@ def run_suite(module_name: str, label: str) -> tuple[int, int, list]:
 def main():
     parser = argparse.ArgumentParser(description="Refraction unified test runner")
     parser.add_argument("suites", nargs="*",
-                        help="Suite name(s): comprehensive / stats / validators / "
-                             "specs / api "
+                        help="Suite name(s): stats / validators / "
+                             "specs / api"
                              "(default: all)")
     args = parser.parse_args()
 

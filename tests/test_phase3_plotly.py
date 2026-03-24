@@ -148,6 +148,98 @@ def test_server_render_endpoint():
 run("plotter_server: /render returns Plotly spec", test_server_render_endpoint)
 
 
+# ===================================================================
+# SEM accuracy test — verifies sample variance (n-1), not population (n)
+# ===================================================================
+
+section("Phase 3: SEM calculation accuracy")
+
+def test_bar_spec_sem_matches_scipy():
+    """SEM in bar spec should match scipy.stats.sem (which uses ddof=1)."""
+    from scipy import stats as scipy_stats
+    vals_a = np.array([2.0, 4.0, 6.0, 8.0, 10.0])
+    vals_b = np.array([1.0, 3.0, 5.0, 7.0, 9.0])
+    expected_sem_a = scipy_stats.sem(vals_a)  # uses ddof=1 by default
+    expected_sem_b = scipy_stats.sem(vals_b)
+
+    xl = bar_excel({"A": vals_a, "B": vals_b})
+    try:
+        from plotter_spec_bar import build_bar_spec
+        spec = json.loads(build_bar_spec({"excel_path": xl}))
+        actual_sem_a = spec["data"][0]["error_y"]["array"][0]
+        actual_sem_b = spec["data"][1]["error_y"]["array"][0]
+        assert abs(actual_sem_a - expected_sem_a) < 1e-10, \
+            f"SEM mismatch: got {actual_sem_a}, expected {expected_sem_a}"
+        assert abs(actual_sem_b - expected_sem_b) < 1e-10, \
+            f"SEM mismatch: got {actual_sem_b}, expected {expected_sem_b}"
+    finally:
+        os.unlink(xl)
+run("plotter_spec_bar: SEM matches scipy.stats.sem (sample variance)", test_bar_spec_sem_matches_scipy)
+
+
+# ===================================================================
+# NaN handling in scatter/line — should not crash or misalign arrays
+# ===================================================================
+
+section("Phase 3: NaN handling in scatter/line")
+
+def test_scatter_with_nan():
+    """Scatter spec should handle NaN values without crashing."""
+    import pandas as pd, tempfile
+    df = pd.DataFrame({"X": [1, 2, 3, 4, 5], "Y": [10, np.nan, 30, np.nan, 50]})
+    tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+    df.to_excel(tmp.name, index=False)
+    tmp.close()
+    try:
+        from plotter_spec_scatter import build_scatter_spec
+        spec_json = build_scatter_spec({"excel_path": tmp.name})
+        spec = json.loads(spec_json)
+        assert "data" in spec, "Missing data key"
+        # X and Y arrays should be the same length (NaN rows dropped)
+        x_len = len(spec["data"][0]["x"])
+        y_len = len(spec["data"][0]["y"])
+        assert x_len == y_len, f"Array mismatch: x={x_len}, y={y_len}"
+        assert x_len == 3, f"Expected 3 non-NaN pairs, got {x_len}"
+    finally:
+        os.unlink(tmp.name)
+run("plotter_spec_scatter: NaN rows dropped, arrays aligned", test_scatter_with_nan)
+
+def test_line_with_nan():
+    """Line spec should handle NaN values without crashing."""
+    import pandas as pd, tempfile
+    df = pd.DataFrame({"X": [1, 2, 3, 4], "Y1": [10, np.nan, 30, 40]})
+    tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+    df.to_excel(tmp.name, index=False)
+    tmp.close()
+    try:
+        from plotter_spec_line import build_line_spec
+        spec_json = build_line_spec({"excel_path": tmp.name})
+        spec = json.loads(spec_json)
+        x_len = len(spec["data"][0]["x"])
+        y_len = len(spec["data"][0]["y"])
+        assert x_len == y_len, f"Array mismatch: x={x_len}, y={y_len}"
+        assert x_len == 3, f"Expected 3 non-NaN pairs, got {x_len}"
+    finally:
+        os.unlink(tmp.name)
+run("plotter_spec_line: NaN rows dropped, arrays aligned", test_line_with_nan)
+
+
+# ===================================================================
+# Open-spine styling — verify template includes mirror: false
+# ===================================================================
+
+section("Phase 3: Open-spine styling in template")
+
+def test_template_has_open_spine():
+    """PRISM_TEMPLATE should have mirror=False for open-spine styling."""
+    from plotter_plotly_theme import PRISM_TEMPLATE
+    xaxis = PRISM_TEMPLATE["layout"]["xaxis"]
+    yaxis = PRISM_TEMPLATE["layout"]["yaxis"]
+    assert xaxis.get("mirror") is False, "xaxis should have mirror=False"
+    assert yaxis.get("mirror") is False, "yaxis should have mirror=False"
+run("plotter_plotly_theme: template has open-spine (mirror=False)", test_template_has_open_spine)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Final summary
 # ─────────────────────────────────────────────────────────────────────────────

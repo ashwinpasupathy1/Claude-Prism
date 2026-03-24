@@ -10,7 +10,7 @@ plotter_barplot_app.py  -- this file; App class + PLOT_REGISTRY + icon helpers
 plotter_widgets.py      -- design-system tokens, PButton/PEntry/PCheckbox etc.
 plotter_validators.py   -- standalone spreadsheet validation functions
 plotter_results.py      -- results-panel population, export, and copy helpers
-plotter_functions.py    -- matplotlib plot functions (29 chart types)
+plotter_functions.py    -- re-exports from plotter_chart_helpers (constants + stats)
 plotter_tabs.py         -- TabState, TabManager, TabBar (plot tab system)
 
 The App class imports from all four companion modules so each can be
@@ -75,11 +75,10 @@ except ImportError as _e:
     print(f"[prism] warning: plotter_app_icons not found ({_e})")
     _ICON_FN = {}
 
-# Heavy scientific imports are deferred to first use so the window
-# appears immediately. They are loaded on a background thread via
-# _import_functions() and also imported lazily inside each method
+# Heavy scientific imports (pandas, scipy) are deferred to first use so
+# the window appears immediately. They are loaded on a background thread
+# via _import_functions() and also imported lazily inside each method
 # that needs them (_do_run, _load_sheets, etc.).
-# matplotlib and pandas are NOT imported here at module level.
 
 # Try to use TkinterDnD for drag-and-drop support
 try:
@@ -121,15 +120,11 @@ def _load_icon_nsimage():
 
 
 def set_dock_icon():
-    """Set the macOS dock icon from bytes  -  immune to Cocoa path-resolution
-    resets that happen when matplotlib/seaborn import NSApplication internally.
+    """Set the macOS dock icon from bytes.
 
-    Three-pronged approach:
-      1. Load icon from raw bytes (not file path)  -  works inside bundles.
-      2. Explicitly set NSApplicationActivationPolicyRegular so macOS treats
-         the process as a proper GUI app.
-      3. Called at startup, every 250 ms during heavy imports, and once more
-         after all imports finish  -  see _watch_dock_icon.
+    Uses raw bytes (not file path) so it works inside .app bundles.
+    Sets NSApplicationActivationPolicyRegular so macOS treats the process
+    as a proper GUI app. Called at startup and after imports finish.
     """
     try:
         from AppKit import NSApplication, NSApplicationActivationPolicyRegular
@@ -312,19 +307,22 @@ def _add_recent(path):
 
 
 # Lightweight sheet/dataframe cache  -  avoids re-reading the same file twice
-_SHEET_CACHE = {}   # path -> (mtime, sheetnames)
-_DF_CACHE    = {}   # (path, sheet) -> (mtime, DataFrame)
+_SHEET_CACHE: dict = {}   # path -> (mtime, sheetnames)
+_DF_CACHE: dict    = {}   # (path, sheet) -> (mtime, DataFrame)
+_CACHE_LOCK = threading.Lock()
 
 def _cached_sheets(path):
     """Return sheet names, using cache if file unchanged."""
     try:
         mtime = os.path.getmtime(path)
-        if path in _SHEET_CACHE and _SHEET_CACHE[path][0] == mtime:
-            return _SHEET_CACHE[path][1]
+        with _CACHE_LOCK:
+            if path in _SHEET_CACHE and _SHEET_CACHE[path][0] == mtime:
+                return _SHEET_CACHE[path][1]
         import openpyxl
         wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
         sheets = wb.sheetnames; wb.close()
-        _SHEET_CACHE[path] = (mtime, sheets)
+        with _CACHE_LOCK:
+            _SHEET_CACHE[path] = (mtime, sheets)
         return sheets
     except Exception:
         _log.debug("_cached_sheets: could not read sheets from %r", path, exc_info=True)
@@ -333,16 +331,15 @@ def _cached_sheets(path):
 def _cached_df(path, sheet):
     """Return DataFrame, using cache if file unchanged."""
     pd = _pd()
-    try:
-        mtime = os.path.getmtime(path)
-        key   = (path, str(sheet))
+    mtime = os.path.getmtime(path)
+    key   = (path, str(sheet))
+    with _CACHE_LOCK:
         if key in _DF_CACHE and _DF_CACHE[key][0] == mtime:
             return _DF_CACHE[key][1]
-        df = pd.read_excel(path, sheet_name=sheet, header=None)
+    df = pd.read_excel(path, sheet_name=sheet, header=None)
+    with _CACHE_LOCK:
         _DF_CACHE[key] = (mtime, df)
-        return df
-    except Exception as e:
-        raise
+    return df
 
 
 
@@ -408,8 +405,6 @@ class App(StatsTabMixin, ValidationMixin, CollectMixin, FileIOMixin,
         self._preview_after_id    = None   # pending after() id for live preview debounce
         self._live_preview_enabled = True  # can be toggled by user preference
         # --- Wave 2 infrastructure ---
-        from plotter_events import EventBus
-        self._bus = EventBus()
         from plotter_undo import UndoStack
         self._undo_stack = UndoStack(max_depth=50)
         from plotter_errors import reporter
@@ -438,7 +433,7 @@ class App(StatsTabMixin, ValidationMixin, CollectMixin, FileIOMixin,
             _log.debug("App.__init__: plotter_session import or init failed", exc_info=True)
             self._session = None
         self.protocol("WM_DELETE_WINDOW", self._on_quit)
-        self.after(30000, self._auto_save)
+        self._auto_save_id = self.after(30000, self._auto_save)
 
         # Phase 3: start FastAPI server for Plotly rendering
         try:
@@ -462,7 +457,7 @@ class App(StatsTabMixin, ValidationMixin, CollectMixin, FileIOMixin,
                 self._session.save_to_disk(state)
         except Exception:
             _log.debug("App._auto_save: session auto-save failed", exc_info=True)
-        self.after(30000, self._auto_save)
+        self._auto_save_id = self.after(30000, self._auto_save)
 
     def _session_restore_prompt(self):
         """Offer to restore the previous session on startup."""
@@ -480,7 +475,7 @@ class App(StatsTabMixin, ValidationMixin, CollectMixin, FileIOMixin,
             _log.debug("App._session_restore_prompt: session restore failed", exc_info=True)
 
     def _on_quit(self):
-        """Save session then destroy the window."""
+        """Save session, cancel pending callbacks, close figures, then destroy."""
         try:
             if self._session is not None:
                 pt = self._plot_type.get() if hasattr(self, "_plot_type") else "bar"
@@ -488,6 +483,16 @@ class App(StatsTabMixin, ValidationMixin, CollectMixin, FileIOMixin,
                 self._session.save_to_disk(state)
         except Exception:
             _log.debug("App._on_quit: session save on quit failed", exc_info=True)
+
+        # Cancel pending after() callbacks to prevent zombie timers
+        for attr in ("_preview_after_id", "_status_fade_id", "_auto_save_id"):
+            aid = getattr(self, attr, None)
+            if aid is not None:
+                try:
+                    self.after_cancel(aid)
+                except Exception:
+                    pass
+
         self.destroy()
 
     def _set_tk_icon(self):
@@ -499,14 +504,10 @@ class App(StatsTabMixin, ValidationMixin, CollectMixin, FileIOMixin,
     def _watch_dock_icon(self):
         """Re-apply the dock icon on a timer while heavy imports run.
 
-        matplotlib/seaborn/openpyxl each touch NSApplication on first import,
-        resetting the dock icon.  The watcher fires every 200 ms until the
-        module import background thread signals it is done (_pf_ready=True),
-        then does one final restore after a short settling delay.
-
-        Note: since matplotlib is now deferred to first export, the icon is
-        only at risk from openpyxl during startup — the watcher still handles
-        that correctly.
+        Some packages (openpyxl) touch NSApplication on first import, which
+        can reset the dock icon. The watcher fires every 200 ms until the
+        background import thread signals it is done (_pf_ready=True), then
+        does one final restore after a short settling delay.
         """
         set_dock_icon()
         if not self._pf_ready:
@@ -546,18 +547,12 @@ class App(StatsTabMixin, ValidationMixin, CollectMixin, FileIOMixin,
 
     def _do_import(self):
         try:
-            # Import plotter_functions module only — matplotlib/seaborn/scipy
-            # are NOT loaded here.  They load lazily on first export call via
-            # pf._ensure_imports().  This keeps startup fast and keeps matplotlib
-            # completely out of memory during normal (Plotly-rendered) sessions.
+            # Import plotter_functions (constants + stats helpers) and pandas.
+            # Rendering goes through Plotly spec builders, not these functions.
             import plotter_functions as pf
             self._pf = pf
-            # pandas is lightweight and needed immediately for file validation.
             import pandas as _pandas_mod
             self._pd = _pandas_mod
-            # _plt stays None until first matplotlib export — callers must guard:
-            #   if self._plt is not None: self._plt.close(...)
-            self._plt = None
             self._pf_ready = True
             self.after(0, set_dock_icon)
             def _check_ready():
@@ -581,21 +576,21 @@ class App(StatsTabMixin, ValidationMixin, CollectMixin, FileIOMixin,
             if key in self._vars:
                 try:
                     self._vars[key].set(default)
-                except Exception:
-                    pass
+                except (tk.TclError, RuntimeError):
+                    _log.debug("_reset_vars_to_defaults: failed to set %s", key)
         # Clear the control group dropdown values so stale group names from a
         # previous chart type can't crash the next plot run.
         for cb in getattr(self, "_control_cbs", []):
             try:
                 cb.config(values=[], state="disabled")
-            except Exception:
-                pass
+            except tk.TclError:
+                _log.debug("_reset_vars_to_defaults: failed to reset combobox")
         if "control" in self._vars:
             try: self._vars["control"].set("")
-            except Exception: pass
+            except tk.TclError: pass
         if "comparison_mode" in self._vars:
             try: self._vars["comparison_mode"].set(0)
-            except Exception: pass
+            except tk.TclError: pass
         for lbl in getattr(self, "_control_hint_lbls", []):
             try:
                 lbl.config(text="Load a file to populate group names",
@@ -1319,41 +1314,44 @@ class App(StatsTabMixin, ValidationMixin, CollectMixin, FileIOMixin,
                 x1, y1, x2, y2 = _pane_cache[wid]
                 return x1 <= wx <= x2 and y1 <= wy <= y2
 
+            def _scroll_scale(raw):
+                """Scroll sensitivity: macOS trackpad sends tiny deltas that need scaling up."""
+                return 8.0 if sys.platform == "darwin" and abs(raw) < 40 else 4.0
+
             def _scroll_canvas(canvas, raw):
-                import sys
                 bbox = canvas.bbox("all")
                 if not bbox: return
                 content_h = bbox[3] - bbox[1]
                 view_h    = canvas.winfo_height()
                 if content_h <= view_h: return
-                # macOS trackpad sends tiny fractional deltas; scale up
-                # macOS trackpad: small deltas need bigger scale for responsive feel
-                scale = 8.0 if sys.platform == "darwin" and abs(raw) < 40 else 4.0
-                frac = -raw * scale / content_h
+                frac = -raw * _scroll_scale(raw) / content_h
                 cur  = canvas.yview()[0]
                 canvas.yview_moveto(max(0.0, min(1.0 - view_h/content_h, cur + frac)))
 
             raw = e.delta if e.delta else 0
             if not raw: return
 
+            # Tk event.state modifier bitmasks
+            _SHIFT = 0x1
+            _CTRL  = 0x4
+            _CMD   = 0x8  # Command key on macOS
+
             # Use _fresh_over for the two main panes to get exact real-time geometry
             in_right = _fresh_over(self._right_pane)
             in_left  = _fresh_over(self._left_pane)
 
             if in_right:
-                if e.state & 0x8 or e.state & 0x4:
+                if e.state & _CMD or e.state & _CTRL:
                     self._zoom_plot(raw); return
-                if e.state & 0x1:
-                    import sys as _sys
+                if e.state & _SHIFT:
                     bbox = self._plot_canvas.bbox("all")
                     if bbox:
                         content_w = bbox[2] - bbox[0]
                         view_w    = self._plot_canvas.winfo_width()
                         if content_w > view_w:
-                            _hscale = 8.0 if _sys.platform == "darwin" and abs(raw) < 40 else 4.0
                             cur = self._plot_canvas.xview()[0]
                             self._plot_canvas.xview_moveto(
-                                max(0.0, min(1.0, cur + (-raw * _hscale / content_w))))
+                                max(0.0, min(1.0, cur + (-raw * _scroll_scale(raw) / content_w))))
                 else:
                     bbox = self._plot_canvas.bbox("all")
                     if bbox:
@@ -1556,8 +1554,8 @@ class App(StatsTabMixin, ValidationMixin, CollectMixin, FileIOMixin,
         right_hsb.config(command=self._plot_canvas.xview)
 
         self._plot_frame    = None   # points to active tab's plot_frame; set by TabManager
-        self._canvas_widget = None   # FigureCanvasTkAgg; updated on tab switch
-        self._fig           = None   # matplotlib Figure; updated on tab switch
+        self._canvas_widget = None   # reserved for future use
+        self._fig           = None   # reserved for future use
         self._last_kw       = None   # kw dict from last successful render (for export)
         self._last_chart_type = None # chart type from last successful render
         self._zoom_level    = 1.0

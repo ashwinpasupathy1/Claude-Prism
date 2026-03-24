@@ -25,11 +25,13 @@ def build_scatter_spec(kw: dict) -> str:
 
     x_col = df.columns[0]
     y_cols = df.columns[1:]
-    x_vals = df[x_col].dropna().tolist()
 
     traces = []
     for i, col in enumerate(y_cols):
-        y_vals = df[col].tolist()
+        # Drop rows where either X or Y is NaN to keep arrays aligned
+        pair = df[[x_col, col]].dropna()
+        x_vals = pair[x_col].tolist()
+        y_vals = pair[col].tolist()
         traces.append(go.Scatter(
             x=x_vals,
             y=y_vals,

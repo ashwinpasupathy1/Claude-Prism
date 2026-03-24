@@ -1175,8 +1175,6 @@ class ExecutionMixin:
 
     def _do_run(self, kw, tab_id=None, job_id=None):
         try:
-            if hasattr(self, "_bus"):
-                self._bus.emit("plot.started", kw=kw)
             pd = _pd()
 
             # Strip internal-only keys
@@ -1224,13 +1222,9 @@ class ExecutionMixin:
             self.after(0, lambda: self._embed_plot(
                 None, groups, kw=_kw_snap, tab_id=tab_id, job_id=job_id))
             self.after(80, lambda: self._populate_results(_ep, _sh, pt, _kw_snap))
-            if hasattr(self, "_bus"):
-                self._bus.emit("plot.completed", kw=_kw_snap)
         except Exception:
             err = traceback.format_exc()
             short = err.strip().splitlines()[-1]
-            if hasattr(self, "_bus"):
-                self._bus.emit("plot.failed", error=short)
             self.after(0, lambda: self._set_status(f"Error: {short}", err=True))
             self.after(0, lambda: messagebox.showerror("Runtime error", err))
             self.after(0, self._reset_btn)

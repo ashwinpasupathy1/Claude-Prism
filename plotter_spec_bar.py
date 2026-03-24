@@ -1,6 +1,6 @@
 """Builds a Plotly figure spec for bar charts from plotter kwargs."""
 
-from plotter_plotly_theme import PRISM_TEMPLATE, apply_open_spine
+from plotter_plotly_theme import PRISM_TEMPLATE
 from plotter_spec_helpers import extract_common_kw, read_excel_or_error, resolve_colors
 
 
@@ -30,7 +30,9 @@ def build_bar_spec(kw: dict) -> str:
     traces = []
     for i, (g, mean) in enumerate(zip(groups, means)):
         vals = values[g]
-        sem = (sum((x - mean) ** 2 for x in vals) / len(vals)) ** 0.5 / (len(vals) ** 0.5) if len(vals) > 1 else 0
+        # SEM = SD / sqrt(n), using sample variance (n-1) not population variance (n)
+        n = len(vals)
+        sem = (sum((x - mean) ** 2 for x in vals) / (n - 1)) ** 0.5 / (n ** 0.5) if n > 1 else 0
         traces.append(go.Bar(
             x=[g],
             y=[mean],
@@ -40,13 +42,10 @@ def build_bar_spec(kw: dict) -> str:
             showlegend=False,
         ))
 
-    layout = go.Layout(
+    fig = go.Figure(data=traces, layout=go.Layout(
         template=PRISM_TEMPLATE,
         title=dict(text=ck["title"], font=dict(size=14)),
         xaxis=dict(title=ck["xlabel"]),
         yaxis=dict(title=ck["ytitle"]),
-    )
-    apply_open_spine(layout.to_plotly_json())
-
-    fig = go.Figure(data=traces, layout=layout)
+    ))
     return fig.to_json()

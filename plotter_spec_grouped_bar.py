@@ -1,7 +1,10 @@
 """Builds a Plotly figure spec for grouped bar charts."""
 
+import logging
 from plotter_plotly_theme import PRISM_TEMPLATE, PRISM_PALETTE
 from plotter_spec_helpers import extract_common_kw, read_excel_or_error
+
+_log = logging.getLogger(__name__)
 
 
 def build_grouped_bar_spec(kw: dict) -> str:
@@ -32,6 +35,7 @@ def build_grouped_bar_spec(kw: dict) -> str:
                 col_data = df[(cat, sg)].dropna()
                 y_vals.append(col_data.mean() if len(col_data) > 0 else 0)
             except KeyError:
+                _log.warning("Missing column (%s, %s) in grouped bar data — using 0", cat, sg)
                 y_vals.append(0)
         traces.append(go.Bar(
             name=sg,

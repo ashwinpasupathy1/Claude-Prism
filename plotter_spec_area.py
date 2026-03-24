@@ -33,7 +33,7 @@ def build_area_spec(kw: dict) -> str:
             name=str(y_col),
             fill=fill,
             line=dict(color=color, width=1.5),
-            fillcolor=color.replace("#", "rgba(").rstrip(")") if False else color,
+            fillcolor=color,
             opacity=0.6,
         ))
 

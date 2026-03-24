@@ -249,10 +249,10 @@ def test_render_unknown_chart_type():
         "kw": {}
     })
     d = resp.json()
-    # Should not crash the server
-    assert resp.status_code == 200
-    # Might return ok=False or an error in the spec
-    # Just verify it doesn't 500
+    # Should return 400 for unknown chart types (not 500)
+    assert resp.status_code == 400
+    assert d["ok"] is False
+    assert "error" in d
 
 run("/render unknown type: doesn't crash server", test_render_unknown_chart_type)
 

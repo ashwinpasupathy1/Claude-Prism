@@ -68,8 +68,9 @@ def _make_app():
     @api.middleware("http")
     async def check_auth(request: Request, call_next):
         """Require API key for non-local requests (if PLOTTER_API_KEY is set)."""
-        host = request.headers.get("host", "")
-        if host.startswith("127.0.0.1") or host.startswith("localhost"):
+        # Use the actual socket IP, not the client-controlled Host header
+        client_ip = request.client.host if request.client else ""
+        if client_ip in ("127.0.0.1", "localhost", "::1"):
             return await call_next(request)
         if API_KEY and request.headers.get("x-api-key") != API_KEY:
             return JSONResponse({"error": "Unauthorized"}, status_code=401)
@@ -80,9 +81,14 @@ def _make_app():
         """Accept chart kwargs, return Plotly JSON."""
         try:
             spec_json = _build_spec(req.chart_type, req.kw)
-            return {"ok": True, "spec": json.loads(spec_json)}
+            spec_dict = json.loads(spec_json)
+            # Detect error responses from spec builders
+            if isinstance(spec_dict, dict) and "error" in spec_dict:
+                return JSONResponse({"ok": False, "error": spec_dict["error"]}, status_code=400)
+            return {"ok": True, "spec": spec_dict}
         except Exception as e:
-            return {"ok": False, "error": str(e)}
+            _log.exception("Render failed for chart_type=%s", req.chart_type)
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
     @api.post("/event")
     def handle_event(req: EventRequest):
@@ -91,16 +97,21 @@ def _make_app():
             _dispatch_event(req.event, req.value, req.extra)
             return {"ok": True}
         except Exception as e:
-            return {"ok": False, "error": str(e)}
+            _log.exception("Event dispatch failed for event=%s", req.event)
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
     @api.post("/spec")
     def get_spec(req: RenderRequest):
         """Return raw Plotly JSON spec without rendering."""
         try:
             spec_json = _build_spec(req.chart_type, req.kw)
+            spec_dict = json.loads(spec_json)
+            if isinstance(spec_dict, dict) and "error" in spec_dict:
+                return JSONResponse({"ok": False, "error": spec_dict["error"]}, status_code=400)
             return {"ok": True, "spec_json": spec_json}
         except Exception as e:
-            return {"ok": False, "error": str(e)}
+            _log.exception("Spec build failed for chart_type=%s", req.chart_type)
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
     @api.get("/chart-types")
     def chart_types():
@@ -136,7 +147,8 @@ def _make_app():
         contents = await file.read()
         if len(contents) > 10 * 1024 * 1024:  # 10 MB limit
             return {"ok": False, "error": "File too large (max 10 MB)"}
-        safe_name = f"{uuid.uuid4().hex[:8]}_{os.path.basename(file.filename or 'data')}"
+        # Fully sanitize filename: use only UUID + extension to prevent path traversal
+        safe_name = f"{uuid.uuid4().hex}{ext}"
         dest = os.path.join(UPLOAD_DIR, safe_name)
         with open(dest, "wb") as f:
             f.write(contents)

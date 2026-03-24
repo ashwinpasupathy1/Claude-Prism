@@ -25,32 +25,8 @@ def _render_latex_image(expression: str, fontsize: int = 13):
     Returns (PIL.Image, PhotoImage-compatible) or None if rendering fails.
     """
     # LaTeX rendering removed (matplotlib dependency dropped).
-    # Returns None — wiki displays plain text instead.
+    # Wiki displays plain text instead.
     return None
-    if False:  # dead code preserved for reference
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-        from io import BytesIO
-
-        fig = plt.figure(figsize=(0.01, 0.01))
-        fig.text(0, 0, expression, fontsize=fontsize, color="#222222")
-        buf = BytesIO()
-        fig.savefig(
-            buf,
-            format="png",
-            dpi=144,
-            bbox_inches="tight",
-            pad_inches=0.05,
-            facecolor="white",
-        )
-        plt.close(fig)
-        buf.seek(0)
-        img = Image.open(buf)
-        img.load()  # ensure loaded before buf is GC'd
-        return img
-    except Exception:
-        return None
 
 
 # ──────────────────────────────────────────────────────────────────

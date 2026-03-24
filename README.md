@@ -4,7 +4,7 @@
 
 ![Tests](https://img.shields.io/badge/tests-531%20total%20·%20522%20core-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.12+-blue)
-![Charts](https://img.shields.io/badge/chart%20types-0-orange)
+![Charts](https://img.shields.io/badge/chart%20types-29-orange)
 ![Status](https://img.shields.io/badge/status-active-success)
 ![Lines](https://img.shields.io/badge/lines%20of%20code-27%2C300+-lightgrey)
 
@@ -44,7 +44,7 @@ docker run -p 7331:7331 claude-plotter
 
 ## Features
 
-- **0 chart types** — from simple bar charts to Kaplan-Meier survival curves and forest plots
+- **29 chart types** — from simple bar charts to Kaplan-Meier survival curves and forest plots
 - **Plotly.js interactive charts** — bar, grouped bar, line, and scatter render via Plotly with editable titles and axes
 - **FastAPI backend** — runs as desktop app or standalone web service
 - **React SPA frontend** — Vite + TypeScript + Plotly.js
@@ -56,7 +56,7 @@ docker run -p 7331:7331 claude-plotter
 - **Style presets** — 5 built-in presets (Classic, Publication, Presentation, Minimal, Dark) + save your own
 - **Session persistence** — settings saved automatically; resume exactly where you left off
 - **Undo/redo** — Cmd+Z / Cmd+Shift+Z for all plot parameter changes
-- **Statistical wiki** — built-in reference for all 0 chart types with formulas and citations
+- **Statistical wiki** — built-in reference for all 29 chart types with formulas and citations
 - **Results panel** — summary statistics, exportable as CSV or copied as TSV for pasting into other apps
 - **Fully modular architecture** — 20+ focused Python modules with zero circular dependencies
 
@@ -74,7 +74,7 @@ docker run -p 7331:7331 claude-plotter
 
 ## Chart Types
 
-Claude Plotter supports **0 chart types** across a wide range of scientific use cases.
+Claude Plotter supports **29 chart types** across a wide range of scientific use cases.
 
 ### Categorical / Distribution
 
@@ -173,7 +173,7 @@ plotter_results.py            401 lines   Results panel: populate / export / cop
 # Phase 2 — Infrastructure
 plotter_registry.py           475 lines   PlotTypeConfig chart registry
 plotter_tabs.py               532 lines   Multi-tab state management
-plotter_app_icons.py          352 lines   Sidebar icon drawing (0 chart types)
+plotter_app_icons.py          352 lines   Sidebar icon drawing (29 chart types)
 plotter_presets.py            163 lines   Style preset system
 plotter_session.py             77 lines   Session persistence
 plotter_events.py              75 lines   EventBus pub/sub
@@ -205,19 +205,19 @@ Dockerfile                                Docker deployment config
 
 ## Test Suite
 
-438 tests across 7 suites.
+120 tests across 7 suites.
 
 ```bash
 # Run everything
 python3 run_all.py
 
 # Run a specific suite
-python3 run_all.py comprehensive      # 175 tests — all chart types + stats engine
+python3 run_all.py comprehensive      # 0 tests — all chart types + stats engine
 python3 run_all.py p1p2p3             #  60 tests — style parameter regressions
 python3 run_all.py control            #  20 tests — control-group statistics
-python3 run_all.py canvas_renderer    # ~438 tests — tk.Canvas renderer (requires display)
+python3 run_all.py canvas_renderer    # ~120 tests — tk.Canvas renderer (requires display)
 python3 run_all.py modular            #  74 tests — widgets / validators / results / tabs
-python3 run_all.py stats_verify       #  37 tests — statistical verification
+python3 run_all.py stats_verify       #  56 tests — statistical verification
 python3 run_all.py phase3_plotly      #  11 tests — Plotly spec builders + server
 ```
 
