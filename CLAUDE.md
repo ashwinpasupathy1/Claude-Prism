@@ -30,8 +30,9 @@ python3 run_all.py specs              #  11+ tests — Plotly spec builders + se
 python3 run_all.py api                #  18 tests — FastAPI endpoint tests
 
 # Launch the app
-python3 plotter_desktop.py                    # Desktop entry point (pywebview + FastAPI)
-python3 -m refraction.server.web_entry        # Standalone web server (no Tk)
+python3 plotter_barplot_app.py        # Tk desktop app
+python3 plotter_desktop.py            # Desktop entry point (pywebview + FastAPI)
+python3 plotter_web_server.py         # Standalone web server (no Tk)
 
 # One-command setup (installs Python deps + npm build)
 ./setup.sh
@@ -40,7 +41,7 @@ python3 -m refraction.server.web_entry        # Standalone web server (no Tk)
 ./build_app.sh
 
 # Quick syntax check of all modules
-python3 -c "from refraction.core import chart_helpers, validators, registry, tabs, types, events, undo, errors, session, presets, comparisons; from refraction.app import widgets, results, icons, wiki, wiki_content; from refraction.server import api, webview; from refraction.io import export, import_pzfx, project; from refraction.specs import bar, line, scatter, grouped_bar; print('OK')"
+python3 -c "import plotter_functions, plotter_widgets, plotter_validators, plotter_results, plotter_registry, plotter_tabs, plotter_app_icons, plotter_presets, plotter_session, plotter_events, plotter_types, plotter_undo, plotter_errors, plotter_comparisons, plotter_project, plotter_import_pzfx, plotter_wiki_content, plotter_app_wiki, plotter_server, plotter_webview, plotter_plotly_theme, plotter_spec_bar, plotter_spec_grouped_bar, plotter_spec_line, plotter_spec_scatter, plotter_web_server, plotter_export; print('OK')"
 ```
 
 ---
@@ -48,100 +49,93 @@ python3 -c "from refraction.core import chart_helpers, validators, registry, tab
 ## File map
 
 ```
-# ── Root-level entry points & config ──────────────────────────────
+# ── Core application ──────────────────────────────────────────────
+plotter_barplot_app.py      2,900 lines   App class, sidebar, all UI wiring
+plotter_functions.py        8 lines   29 matplotlib chart functions + stats
+plotter_widgets.py            952 lines   _DS tokens, PButton/PEntry/PCheckbox etc.
+plotter_validators.py         528 lines   Standalone spreadsheet validators
+plotter_results.py            405 lines   Results panel: populate / export / copy
+plotter_export.py             170 lines   Journal export presets (Nature/Science/Cell) + kaleido
+
+# ── Phase 2 infrastructure modules ────────────────────────────────
+plotter_registry.py           475 lines   PlotTypeConfig registry (29 entries)
+plotter_tabs.py               532 lines   Multi-tab state (TabState, TabManager, TabBar)
+plotter_app_icons.py          352 lines   Sidebar icon drawing for all chart types
+plotter_presets.py            163 lines   Style preset load/save (.json)
+plotter_session.py             77 lines   Session persistence (last-used settings)
+plotter_events.py              75 lines   EventBus for decoupled pub/sub messaging
+plotter_types.py              121 lines   Shared type definitions and dataclasses
+plotter_undo.py               131 lines   UndoStack for undo/redo support
+plotter_errors.py              99 lines   ErrorReporter: structured error handling
+plotter_comparisons.py        248 lines   Custom comparison builder UI
+plotter_project.py            207 lines   .cplot project file save/open (ZIP format)
+plotter_import_pzfx.py        316 lines   GraphPad .pzfx file importer
+plotter_wiki_content.py     2,224 lines   Statistical wiki content (29 sections)
+plotter_app_wiki.py           522 lines   Wiki popup viewer (Tk UI)
+
+# ── Phase 3 — Plotly / FastAPI / Web ──────────────────────────────
+plotter_server.py             183 lines   FastAPI server + auth + endpoints
+plotter_webview.py            179 lines   pywebview wrapper for desktop mode
+plotter_plotly_theme.py        51 lines   Plotly theme constants (PRISM_TEMPLATE)
+plotter_spec_bar.py            67 lines   Bar chart Plotly spec builder
+plotter_spec_grouped_bar.py    57 lines   Grouped bar Plotly spec builder
+plotter_spec_line.py           55 lines   Line graph Plotly spec builder
+plotter_spec_scatter.py        58 lines   Scatter plot Plotly spec builder
+
+# ── Phase 5 — All 29 Plotly spec builders ─────────────────────────
+plotter_spec_box.py            55 lines   Box plot Plotly spec builder
+plotter_spec_violin.py         58 lines   Violin plot Plotly spec builder
+plotter_spec_histogram.py      55 lines   Histogram Plotly spec builder
+plotter_spec_dot_plot.py       61 lines   Dot plot Plotly spec builder
+plotter_spec_raincloud.py      88 lines   Raincloud Plotly spec builder
+plotter_spec_qq.py             77 lines   Q-Q plot Plotly spec builder
+plotter_spec_ecdf.py           56 lines   ECDF Plotly spec builder
+plotter_spec_before_after.py   69 lines   Before/After Plotly spec builder
+plotter_spec_repeated_measures.py 77 lines Repeated Measures Plotly spec builder
+plotter_spec_subcolumn.py      71 lines   Subcolumn scatter Plotly spec builder
+plotter_spec_stacked_bar.py    57 lines   Stacked bar Plotly spec builder
+plotter_spec_area.py           53 lines   Area chart Plotly spec builder
+plotter_spec_lollipop.py       66 lines   Lollipop Plotly spec builder
+plotter_spec_waterfall.py      54 lines   Waterfall Plotly spec builder
+plotter_spec_pyramid.py        71 lines   Pyramid Plotly spec builder
+plotter_spec_kaplan_meier.py  105 lines   Kaplan-Meier Plotly spec builder
+plotter_spec_heatmap.py        49 lines   Heatmap Plotly spec builder
+plotter_spec_bland_altman.py   64 lines   Bland-Altman Plotly spec builder
+plotter_spec_forest_plot.py    73 lines   Forest plot Plotly spec builder
+plotter_spec_bubble.py         71 lines   Bubble chart Plotly spec builder
+plotter_spec_curve_fit.py      83 lines   Curve fit Plotly spec builder
+plotter_spec_column_stats.py   73 lines   Column statistics Plotly spec builder
+plotter_spec_contingency.py    45 lines   Contingency Plotly spec builder
+plotter_spec_chi_square_gof.py 68 lines   Chi-Square GoF Plotly spec builder
+plotter_spec_two_way_anova.py  57 lines   Two-Way ANOVA Plotly spec builder
+
+# ── Phase 6 — Desktop + Deployment ────────────────────────────────
 plotter_desktop.py            183 lines   Desktop entry point (pywebview + FastAPI)
-run_all.py                    115 lines   Unified test runner (4 suites)
 setup.sh                      159 lines   One-command setup script
 build_app.sh                  323 lines   PyInstaller + optional DMG builder
-Dockerfile                                Docker deployment config
-refraction.spec                           PyInstaller spec file
-requirements.txt                          Desktop dependencies
-requirements-web.txt                      Web-only dependencies
 
-# ── refraction/app/ — Tk desktop UI layer ─────────────────────────
-refraction/app/main.py        2,900 lines App class, sidebar, all UI wiring
-refraction/app/collect.py                 Parameter collection from UI controls
-refraction/app/execution.py   1,447 lines Render execution, plot generation, threading
-refraction/app/file_io.py                 File I/O: open, save, import, export
-refraction/app/icons.py         352 lines Sidebar icon drawing for all chart types
-refraction/app/validators.py              Spreadsheet validation dispatch (app mixin)
-refraction/app/stats_tabs.py    757 lines Stats UI tabs for all 29 chart types
-refraction/app/results.py       405 lines Results panel: populate / export / copy
-refraction/app/widgets.py       952 lines _DS tokens, PButton/PEntry/PCheckbox etc.
-refraction/app/wiki.py          522 lines Wiki popup viewer (Tk UI)
-refraction/app/wiki_content.py 2,224 lines Statistical wiki content (29 sections)
-
-# ── refraction/core/ — State, infrastructure, stats engine ────────
-refraction/core/chart_helpers.py 1,135 lines Stats engine, constants, shared helpers
-refraction/core/registry.py      475 lines PlotTypeConfig registry (29 entries)
-refraction/core/tabs.py          532 lines Multi-tab state (TabState, TabManager, TabBar)
-refraction/core/types.py         121 lines Shared type definitions and dataclasses
-refraction/core/validators.py    528 lines Standalone spreadsheet validators
-refraction/core/events.py         75 lines EventBus for decoupled pub/sub messaging
-refraction/core/undo.py          131 lines UndoStack for undo/redo support
-refraction/core/errors.py         99 lines ErrorReporter: structured error handling
-refraction/core/session.py        77 lines Session persistence (last-used settings)
-refraction/core/presets.py       163 lines Style preset load/save (.json)
-refraction/core/comparisons.py   248 lines Custom comparison builder UI
-
-# ── refraction/specs/ — Plotly spec builders (29 chart types) ─────
-refraction/specs/theme.py         51 lines Plotly theme constants (PRISM_TEMPLATE)
-refraction/specs/helpers.py       49 lines Shared spec builder utilities
-refraction/specs/bar.py           67 lines Bar chart
-refraction/specs/grouped_bar.py   57 lines Grouped bar
-refraction/specs/line.py          55 lines Line graph
-refraction/specs/scatter.py       58 lines Scatter plot
-refraction/specs/box.py           55 lines Box plot
-refraction/specs/violin.py        58 lines Violin plot
-refraction/specs/histogram.py     55 lines Histogram
-refraction/specs/dot_plot.py      61 lines Dot plot
-refraction/specs/raincloud.py     88 lines Raincloud
-refraction/specs/qq.py            77 lines Q-Q plot
-refraction/specs/ecdf.py          56 lines ECDF
-refraction/specs/before_after.py  69 lines Before/After
-refraction/specs/repeated_measures.py 77 lines Repeated Measures
-refraction/specs/subcolumn.py     71 lines Subcolumn scatter
-refraction/specs/stacked_bar.py   57 lines Stacked bar
-refraction/specs/area.py          53 lines Area chart
-refraction/specs/lollipop.py      66 lines Lollipop
-refraction/specs/waterfall.py     54 lines Waterfall
-refraction/specs/pyramid.py       71 lines Pyramid
-refraction/specs/kaplan_meier.py 105 lines Kaplan-Meier
-refraction/specs/heatmap.py       49 lines Heatmap
-refraction/specs/bland_altman.py  64 lines Bland-Altman
-refraction/specs/forest_plot.py   73 lines Forest plot
-refraction/specs/bubble.py        71 lines Bubble chart
-refraction/specs/curve_fit.py     83 lines Curve fit
-refraction/specs/column_stats.py  73 lines Column statistics
-refraction/specs/contingency.py   45 lines Contingency
-refraction/specs/chi_square_gof.py 68 lines Chi-Square GoF
-refraction/specs/two_way_anova.py 57 lines Two-Way ANOVA
-
-# ── refraction/server/ — FastAPI + web ────────────────────────────
-refraction/server/api.py        183 lines FastAPI server + auth + endpoints
-refraction/server/webview.py    179 lines pywebview wrapper for desktop mode
-refraction/server/web_entry.py   49 lines Standalone web server entry point (no Tk)
-
-# ── refraction/io/ — Import/export ────────────────────────────────
-refraction/io/export.py         170 lines Journal export presets (Nature/Science/Cell) + kaleido
-refraction/io/import_pzfx.py   316 lines GraphPad .pzfx file importer
-refraction/io/project.py       207 lines .cplot project file save/open (ZIP format)
-
-# ── plotter_web/ — React SPA ─────────────────────────────────────
+# ── Phase 4 — Web Deployment ──────────────────────────────────────
+plotter_web_server.py          49 lines   Standalone web server entry point (no Tk)
 plotter_web/                              React SPA (Vite + TypeScript + Plotly.js)
+Dockerfile                                Docker deployment config
+requirements.txt                          Desktop dependencies
+requirements-web.txt                      Web-only dependencies (no Tk/matplotlib)
 
-# ── tests/ — Test infrastructure ──────────────────────────────────
+# ── Test infrastructure ────────────────────────────────────────────
 tests/plotter_test_harness.py 363 lines   Shared test bootstrap (imports once)
-tests/test_stats.py         1,200+ lines  Statistical verification + control logic (56 tests)
+run_all.py                    115 lines   5-suite unified test runner
+tests/test_comprehensive.py 1,341 lines   Main chart function tests (120 tests)
+tests/test_stats.py         1,200+ lines  Statistical verification + control logic (57 tests)
 tests/test_validators.py      600+ lines  Spreadsheet validator tests (35 tests)
 tests/test_api.py             500+ lines  FastAPI endpoint tests (18 tests)
+tests/test_png_render.py      450+ lines  All 29 chart PNG render tests (29 tests)
 tests/test_phase3_plotly.py   156 lines   Plotly spec builders + server (11 tests)
 tests/visual_test.py          552 lines   Visual regression tests (manual)
 
-# ── Other ─────────────────────────────────────────────────────────
-scripts/                                  Utility scripts (icon/logo generation)
-assets/                                   App icons and logos
-docs/                                     Documentation + archived phase notes
+# ── Archived ───────────────────────────────────────────────────────
+docs/archive/phase2/                      Phase 2 development notes
+docs/archive/phase3/                      Phase 3 development notes
+docs/archive/phase4/                      Phase 4 development notes
 ```
 
 ---
@@ -162,23 +156,24 @@ App._run()  →  App._do_run() [background thread]
     │
     ├── Plotly path (primary — all 29 chart types):
     │     POST /render {chart_type, kw}
-    │     → refraction.server.api._build_spec()
-    │     → refraction.specs.*.build_*_spec(kw)
+    │     → plotter_server._build_spec()
+    │     → plotter_spec_*.build_*_spec(kw)
     │     → Plotly JSON spec → rendered by Plotly.js in webview
     │
     └── Matplotlib path (fallback / export):
-          refraction.core.chart_helpers  →  matplotlib fig, ax
+          plotter_functions.plotter_barplot(**kw)  →  matplotlib fig, ax
           → FigureCanvasTkAgg(fig)  or  fig.savefig(path)
 ```
 
 ### Dependency graph
 
 ```
-refraction/app/main.py
-  ├── refraction/app/widgets.py       (no deps — pure Tk + constants)
-  ├── refraction/core/validators.py   (no deps — pure pandas)
-  ├── refraction/app/results.py       (receives app object; no other deps)
-  └── refraction/core/chart_helpers.py (numpy, pandas, scipy — all lazy)
+plotter_barplot_app.py
+  ├── plotter_widgets.py          (no prism deps — pure Tk + constants)
+  ├── plotter_validators.py       (no prism deps — pure pandas)
+  ├── plotter_results.py          (receives app object; no other prism imports)
+  ├── plotter_functions.py        (numpy, pandas, matplotlib, scipy — all lazy)
+  └── plotter_canvas_renderer.py  (numpy, pandas — NO matplotlib)
 ```
 
 ### Key App methods
@@ -204,7 +199,7 @@ refraction/app/main.py
 
 ## Adding a new chart type — the 5-step checklist
 
-### Step 1 — Write the plot function in `refraction/core/chart_helpers.py`
+### Step 1 — Write the plot function in `plotter_functions.py`
 
 Insert **before** the `# P20 — Export all chart types` block (around line 5586).
 
@@ -264,10 +259,10 @@ def prism_my_chart(
 - Always `return fig, ax`
 - Never import matplotlib or seaborn at module level — they're lazy-loaded by `_ensure_imports()`
 
-### Step 2 — Register it in `refraction/core/registry.py`
+### Step 2 — Register it in `plotter_registry.py`
 
-Add a new `PlotTypeConfig(...)` entry to the registry list in `refraction/core/registry.py`.
-Also add a sidebar icon drawing function to `refraction/app/icons.py`.
+Add a new `PlotTypeConfig(...)` entry to the registry list in `plotter_registry.py`.
+Also add a sidebar icon drawing function to `plotter_app_icons.py`.
 
 ```python
 PlotTypeConfig(
@@ -310,7 +305,7 @@ at line ~5143 for a template) and set `stats_tab="my_chart"` in the registry.
 Add new `tk.StringVar` / `tk.BooleanVar` defaults to `_reset_vars_to_defaults()`
 so the form resets correctly when switching chart types.
 
-### Step 4 — Add a validator in `refraction/core/validators.py`
+### Step 4 — Add a validator in `plotter_validators.py`
 
 ```python
 def validate_my_chart(df) -> tuple[list, list]:
@@ -320,8 +315,8 @@ def validate_my_chart(df) -> tuple[list, list]:
     return errors, warnings
 ```
 
-Then wire it in `refraction/app/main.py`:
-- Import it in the `from refraction.core.validators import ...` block at the top
+Then wire it in `plotter_barplot_app.py`:
+- Import it in the `from plotter_validators import ...` block at the top
 - Add it to `_STANDALONE_VALIDATORS` dict in `_validate_spreadsheet()`
 - Update `PlotTypeConfig.validate` to `"_validate_my_chart"`
 
@@ -337,7 +332,7 @@ Run `python3 run_all.py` — all existing tests must still pass.
 
 ## Core helper functions (use these, don't reinvent them)
 
-### In refraction/core/chart_helpers.py
+### In `plotter_functions.py`
 
 | Function | Purpose |
 |---|---|
@@ -359,7 +354,7 @@ Run `python3 run_all.py` — all existing tests must still pass.
 | `_fmt_bar_label(v)` | Format a numeric value for bar top labels |
 | `normality_warning(groups, stats_test)` | Returns warning string if non-normal |
 
-### In refraction/app/widgets.py
+### In `plotter_widgets.py`
 
 | Symbol | Purpose |
 |---|---|
@@ -387,7 +382,7 @@ Run `python3 run_all.py` — all existing tests must still pass.
 
 ---
 
-## Style constants (all in `refraction/core/chart_helpers.py`)
+## Style constants (all in `plotter_functions.py`)
 
 ```python
 _DPI        = 144       # render DPI (144 = retina-grade)
@@ -538,7 +533,7 @@ Additional test files (not in run_all.py):
    Check for `None` before using.
 
 6. **All 29 chart types are now registered** — area_chart, raincloud, qq_plot,
-   lollipop, waterfall, pyramid, and ecdf were added to `refraction/core/registry.py`
+   lollipop, waterfall, pyramid, and ecdf were added to `plotter_registry.py`
    and appear in the sidebar. This gotcha is resolved.
 
 7. **`ttk.Treeview` heading colours on macOS Aqua theme** — `ttk.Style.configure`
@@ -583,9 +578,9 @@ backward compatibility. All 120 tests pass.
 
 | Module | Purpose |
 |---|---|
-| `refraction/core/registry.py` | `PlotTypeConfig` registry extracted from `refraction/app/main.py` |
+| `plotter_registry.py` | `PlotTypeConfig` registry extracted from `plotter_barplot_app.py` |
 | `plotter_tabs.py` | Multi-tab state management: `TabState`, `TabManager`, `TabBar` |
-| `refraction/app/icons.py` | Sidebar icon drawing for all 29 chart types |
+| `plotter_app_icons.py` | Sidebar icon drawing for all 29 chart types |
 | `plotter_presets.py` | Style preset system: load/save named presets as `.json` |
 | `plotter_session.py` | Session persistence: auto-save and restore last-used settings |
 | `plotter_events.py` | `EventBus` for decoupled pub/sub messaging between components |
@@ -631,9 +626,9 @@ backward compatibility. All 120 tests pass.
 14. **`.cplot` files are ZIP archives** — they contain `settings.json` +
     the original Excel file. Do not assume plain JSON.
 
-15. **`refraction/core/registry.py` is the canonical source** for `PlotTypeConfig` entries.
-    `refraction/app/main.py` imports the registry; do not add new chart types
-    directly to `refraction/app/main.py`.
+15. **`plotter_registry.py` is the canonical source** for `PlotTypeConfig` entries.
+    `plotter_barplot_app.py` imports the registry; do not add new chart types
+    directly to `plotter_barplot_app.py`.
 
 ## Phase 3 — Plotly / FastAPI / Web Rendering (March 2026)
 
@@ -644,9 +639,9 @@ enabling both desktop (pywebview) and web (browser) modes.
 
 | Module | Lines | Purpose |
 |---|---|---|
-| `refraction/server/api.py` | 183 | FastAPI server: `/health`, `/render`, auth middleware |
+| `plotter_server.py` | 183 | FastAPI server: `/health`, `/render`, auth middleware |
 | `plotter_webview.py` | 179 | `PlotterWebView` class wrapping pywebview for desktop |
-| `refraction/specs/theme.py` | 51 | `PRISM_TEMPLATE` and `PRISM_PALETTE` for Plotly |
+| `plotter_plotly_theme.py` | 51 | `PRISM_TEMPLATE` and `PRISM_PALETTE` for Plotly |
 | `plotter_spec_bar.py` | 67 | `build_bar_spec()` — bar chart Plotly JSON builder |
 | `plotter_spec_grouped_bar.py` | 57 | `build_grouped_bar_spec()` |
 | `plotter_spec_line.py` | 55 | `build_line_spec()` |
@@ -659,17 +654,17 @@ enabling both desktop (pywebview) and web (browser) modes.
 
 21. **Spec builders read Excel directly** — each `build_*_spec()` function
     reads the Excel file and returns a Plotly JSON dict. They do NOT go
-    through `refraction/core/chart_helpers.py`.
+    through `plotter_functions.py`.
 
-22. **`refraction/server/api.py` vs `refraction/server/web_entry.py`** — `refraction/server/api.py`
-    defines the FastAPI app and endpoints. `refraction/server/web_entry.py` is a thin
+22. **`plotter_server.py` vs `plotter_web_server.py`** — `plotter_server.py`
+    defines the FastAPI app and endpoints. `plotter_web_server.py` is a thin
     entry point that imports and runs it for standalone web deployment.
 
 ---
 
 ## Journal Export (plotter_export.py)
 
-`refraction/io/export.py` provides publication-quality figure export with presets for
+`plotter_export.py` provides publication-quality figure export with presets for
 Nature, Science, and Cell journals.
 
 ### Journal dimension presets
@@ -713,7 +708,7 @@ Nature, Science, and Cell journals.
 ### New files
 | File | Purpose |
 |---|---|
-| `refraction/server/web_entry.py` | Standalone web server entry point (no Tk) |
+| `plotter_web_server.py` | Standalone web server entry point (no Tk) |
 | `Dockerfile` | Docker deployment config |
 | `requirements.txt` | Desktop dependencies |
 | `requirements-web.txt` | Web server dependencies (no Tk/matplotlib) |
@@ -722,14 +717,14 @@ Nature, Science, and Cell journals.
 ### Running as a web service
 ```bash
 # Local development
-python3 -m refraction.server.web_entry
+python3 plotter_web_server.py
 
 # With Docker
 docker build -t claude-plotter .
 docker run -p 7331:7331 claude-plotter
 
 # With API key authentication
-PLOTTER_API_KEY=your-secret python3 -m refraction.server.web_entry
+PLOTTER_API_KEY=your-secret python3 plotter_web_server.py
 ```
 
 ### Architecture
@@ -742,7 +737,7 @@ Both modes:     same Python business logic, same FastAPI server
 ### Phase 4 gotchas
 
 16. **pywebview on headless servers** — pywebview requires a display.
-    Use `refraction/server/web_entry.py` (no Tk, no pywebview) for headless deployment.
+    Use `plotter_web_server.py` (no Tk, no pywebview) for headless deployment.
 
 17. **React SPA build** — Run `cd plotter_web && npm install && npm run build`
     before deployment. The dist/ directory must exist for static file serving.
@@ -820,7 +815,7 @@ backend with input validation and upload support.
 25. **React SPA needs rebuild after changes** — `cd plotter_web && npm run build`.
     The FastAPI server serves the built `dist/` directory as static files.
 
-26. **Spec builders are independent of `refraction/core/chart_helpers.py`** — they read Excel
+26. **Spec builders are independent of `plotter_functions.py`** — they read Excel
     directly and produce Plotly JSON. They do NOT share rendering code with the
     matplotlib chart functions. Visual parity is maintained by using `PRISM_PALETTE`
-    and `PRISM_TEMPLATE` from `refraction/specs/theme.py`.
+    and `PRISM_TEMPLATE` from `plotter_plotly_theme.py`.

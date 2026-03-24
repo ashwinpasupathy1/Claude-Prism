@@ -13,6 +13,10 @@ __pycache__/
 .venv/
 venv/
 
+# Build artifacts
+build/
+dist/
+
 # Temporary / test output files
 *.tmp
 *.log
