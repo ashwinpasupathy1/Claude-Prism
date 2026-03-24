@@ -124,7 +124,7 @@ info "  refraction.spec: found"
 
 # icon (optional — warn but continue)
 if [ ! -f "assets/AppIcon.icns" ]; then
-    warn "assets/AppIcon.icns not found. Run: python3 generate_refraction_logos.py"
+    warn "assets/AppIcon.icns not found. Ensure assets/icon.svg exists and regenerate."
 fi
 
 success "All required prerequisites satisfied."

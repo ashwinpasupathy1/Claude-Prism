@@ -1,19 +1,30 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <!-- Rounded-rectangle background -->
-  <rect x="0" y="0" width="64" height="64" rx="14" ry="14" fill="#2274A5"/>
+<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Refraction Logo — clean modern prism diffraction -->
 
-  <!-- Baseline rule -->
-  <rect x="8" y="49" width="44" height="2" fill="rgba(255,255,255,0.78)" rx="1"/>
+  <defs>
+    <linearGradient id="prism-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="white" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0.75"/>
+    </linearGradient>
+  </defs>
 
-  <!-- Bar 1 (shortest, leftmost) -->
-  <rect x="10" y="35" width="8" height="14" fill="white" rx="2"/>
+  <!-- Dark background -->
+  <rect width="1024" height="1024" fill="#12162B"/>
 
-  <!-- Bar 2 -->
-  <rect x="22" y="26" width="8" height="23" fill="white" rx="2"/>
+  <!-- Incoming white beam -->
+  <line x1="130" y1="490" x2="400" y2="490"
+        stroke="white" stroke-width="6" stroke-linecap="round" opacity="0.65"/>
 
-  <!-- Bar 3 (tallest) -->
-  <rect x="34" y="17" width="8" height="32" fill="white" rx="2"/>
+  <!-- Prism — equilateral, clean, slight gradient -->
+  <polygon points="512,285 395,680 629,680"
+           fill="url(#prism-grad)"/>
 
-  <!-- Bar 4 -->
-  <rect x="46" y="29" width="8" height="20" fill="white" rx="2"/>
+  <!-- Spectrum beams — originate from right edge of prism, evenly fanned -->
+  <line x1="585" y1="450" x2="895" y2="240" stroke="#E8453C" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+  <line x1="585" y1="450" x2="900" y2="320" stroke="#F5A623" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+  <line x1="585" y1="450" x2="902" y2="400" stroke="#E8D44D" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+  <line x1="585" y1="450" x2="902" y2="480" stroke="#32936F" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+  <line x1="585" y1="450" x2="900" y2="560" stroke="#2274A5" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+  <line x1="585" y1="450" x2="895" y2="640" stroke="#4B6CB7" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+  <line x1="585" y1="450" x2="888" y2="720" stroke="#7B2FBE" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
 </svg>
