@@ -30,6 +30,7 @@ LINE = "━" * 64
 
 SUITES = {
     "stats":         "test_stats",
+    "stats_exhaustive": "test_stats_exhaustive",
     "validators":    "test_validators",
     "specs":         "test_phase3_plotly",
     "api":           "test_api",
