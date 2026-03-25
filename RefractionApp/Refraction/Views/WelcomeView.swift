@@ -45,13 +45,23 @@ struct WelcomeView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
 
-                Button {
-                    loadSampleData()
+                Menu {
+                    ForEach(TableType.allCases) { type in
+                        Button {
+                            // Use detached task so it survives WelcomeView being removed
+                            let state = appState
+                            Task.detached { @MainActor in
+                                await state.loadSampleTable(type: type)
+                            }
+                        } label: {
+                            Label(type.label, systemImage: type.sfSymbol)
+                        }
+                    }
                 } label: {
                     Label("Try Sample Data", systemImage: "flask")
                         .frame(width: 200)
                 }
-                .buttonStyle(.bordered)
+                .menuStyle(.borderedButton)
                 .controlSize(.large)
             }
 
@@ -82,9 +92,9 @@ struct WelcomeView: View {
                     .frame(maxWidth: .infinity, alignment: .center)
 
                 VStack(alignment: .leading, spacing: 6) {
-                    tipRow(icon: "1.circle.fill", text: "Open a data file or try the sample data")
-                    tipRow(icon: "2.circle.fill", text: "Choose a chart type from the sidebar")
-                    tipRow(icon: "3.circle.fill", text: "Adjust settings and click Generate")
+                    tipRow(icon: "1.circle.fill", text: "Create a data table and import your data")
+                    tipRow(icon: "2.circle.fill", text: "Add a graph sheet from the navigator")
+                    tipRow(icon: "3.circle.fill", text: "Click Generate to create your chart")
                 }
                 .frame(maxWidth: 340)
                 .frame(maxWidth: .infinity)
@@ -165,46 +175,11 @@ struct WelcomeView: View {
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
+        // Create a default Column data table and upload
+        appState.addDataTable(type: .column, label: url.deletingPathExtension().lastPathComponent)
         Task {
             await appState.uploadFile(url: url)
         }
     }
 
-    private func loadSampleData() {
-        // Try multiple lookup strategies for bundled sample data.
-        // Strategy 1: folder reference (subdirectory preserved in bundle)
-        // Strategy 2: flat copy (xcodegen group-based resources)
-        // Strategy 3: direct path search in bundle resources
-        let sampleURL: URL? =
-            Bundle.main.url(forResource: "drug_treatment", withExtension: "xlsx", subdirectory: "SampleData")
-            ?? Bundle.main.url(forResource: "drug_treatment", withExtension: "xlsx")
-            ?? Bundle.main.resourceURL?.appendingPathComponent("SampleData/drug_treatment.xlsx")
-
-        if let url = sampleURL, FileManager.default.fileExists(atPath: url.path) {
-            Task {
-                await appState.uploadFile(url: url)
-            }
-        } else {
-            // Build diagnostic info so future debugging is easier
-            let bundlePath = Bundle.main.bundlePath
-            let resourcePath = Bundle.main.resourcePath ?? "(nil)"
-            let xlsxFiles = (try? FileManager.default.contentsOfDirectory(
-                at: Bundle.main.resourceURL ?? URL(fileURLWithPath: "/"),
-                includingPropertiesForKeys: nil
-            ).filter { $0.pathExtension == "xlsx" }.map(\.lastPathComponent)) ?? []
-
-            let sampleDirExists = FileManager.default.fileExists(
-                atPath: (Bundle.main.resourceURL?.appendingPathComponent("SampleData").path) ?? ""
-            )
-
-            appState.error = """
-                Sample data file not found in app bundle.
-                Bundle: \(bundlePath)
-                Resources: \(resourcePath)
-                SampleData dir exists: \(sampleDirExists)
-                .xlsx files in resources: \(xlsxFiles.isEmpty ? "none" : xlsxFiles.joined(separator: ", "))
-                Tip: Run 'xcodegen generate' and rebuild.
-                """
-        }
-    }
 }

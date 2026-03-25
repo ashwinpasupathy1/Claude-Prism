@@ -1,5 +1,5 @@
-// ChartSidebarView.swift — Chart type selector grouped by category.
-// Uses SF Symbols for icons and highlights the selected chart type.
+// ChartSidebarView.swift — Deprecated: chart type selection is now handled
+// by NavigatorView. This stub remains for any residual references.
 
 import SwiftUI
 
@@ -8,19 +8,12 @@ struct ChartSidebarView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        @Bindable var state = appState
-
-        List(selection: $state.selectedChartType) {
-            ForEach(ChartType.byCategory, id: \.category) { group in
-                Section(group.category.rawValue) {
-                    ForEach(group.types) { chartType in
-                        Label(chartType.label, systemImage: chartType.sfSymbol)
-                            .tag(chartType)
-                    }
-                }
-            }
-        }
-        .listStyle(.sidebar)
-        .navigationTitle("Charts")
+        // Chart type selection has moved to NavigatorView / Sheet.kind.
+        // This view is kept as a minimal stub for compilation.
+        ContentUnavailableView(
+            "Use Navigator",
+            systemImage: "sidebar.left",
+            description: Text("Chart type selection has moved to the navigator sidebar.")
+        )
     }
 }

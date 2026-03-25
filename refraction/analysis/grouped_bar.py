@@ -56,7 +56,7 @@ def analyze_grouped_bar(kw: dict) -> ChartSpec:
         errors[sg] = sg_errors
 
     return ChartSpec(
-        chart_type="grouped_bar",
+        chart_type=kw.get("_chart_type", "grouped_bar"),
         title=cfg["title"],
         x_axis=AxisSpec(label=cfg["xlabel"]),
         y_axis=AxisSpec(

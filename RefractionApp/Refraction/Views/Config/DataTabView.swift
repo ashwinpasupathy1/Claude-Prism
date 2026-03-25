@@ -9,132 +9,137 @@ struct DataTabView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        @Bindable var config = appState.chartConfig
+        if let sheet = appState.activeSheet, sheet.kind == .graph,
+           let chartType = sheet.chartType,
+           let config = sheet.chartConfig {
+            @Bindable var config = config
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
 
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+                    // MARK: - Data section
+                    sectionHeader("Data")
 
-                // MARK: - Data section
-                sectionHeader("Data")
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text(fileDisplayName(for: config))
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .foregroundStyle(config.excelPath.isEmpty ? .secondary : .primary)
 
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(fileDisplayName)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .foregroundStyle(config.excelPath.isEmpty ? .secondary : .primary)
-
-                        Button("Choose File...") {
-                            openFilePicker()
+                            Button("Choose File...") {
+                                openFilePicker()
+                            }
+                            .controlSize(.small)
                         }
-                        .controlSize(.small)
+
+                        LabeledContent("Sheet") {
+                            TextField("Sheet", value: $config.sheet, format: .number)
+                                .textFieldStyle(.roundedBorder)
+                                .frame(width: 60)
+                        }
                     }
 
-                    LabeledContent("Sheet") {
-                        TextField("Sheet", value: $config.sheet, format: .number)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 60)
+                    Divider()
+
+                    // MARK: - Labels section
+                    sectionHeader("Labels")
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        LabeledContent("Title") {
+                            TextField("Chart title", text: $config.title)
+                                .textFieldStyle(.roundedBorder)
+                        }
+
+                        LabeledContent("X Label") {
+                            TextField("X axis label", text: $config.xlabel)
+                                .textFieldStyle(.roundedBorder)
+                        }
+
+                        LabeledContent("Y Label") {
+                            TextField("Y axis label", text: $config.ylabel)
+                                .textFieldStyle(.roundedBorder)
+                        }
                     }
-                }
 
-                Divider()
+                    Divider()
 
-                // MARK: - Labels section
-                sectionHeader("Labels")
+                    // MARK: - Style section
+                    sectionHeader("Style")
 
-                VStack(alignment: .leading, spacing: 8) {
-                    LabeledContent("Title") {
-                        TextField("Chart title", text: $config.title)
-                            .textFieldStyle(.roundedBorder)
-                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        if chartType.hasErrorBars {
+                            LabeledContent("Error Bars") {
+                                Picker("", selection: $config.errorType) {
+                                    ForEach(ChartConfig.ErrorType.allCases) { type in
+                                        Text(type.rawValue).tag(type)
+                                    }
+                                }
+                                .labelsHidden()
+                                .frame(width: 100)
+                            }
+                        }
 
-                    LabeledContent("X Label") {
-                        TextField("X axis label", text: $config.xlabel)
-                            .textFieldStyle(.roundedBorder)
-                    }
+                        if chartType.hasPoints {
+                            Toggle("Show data points", isOn: $config.showPoints)
 
-                    LabeledContent("Y Label") {
-                        TextField("Y axis label", text: $config.ylabel)
-                            .textFieldStyle(.roundedBorder)
-                    }
-                }
+                            if config.showPoints {
+                                LabeledContent("Point size") {
+                                    Slider(value: $config.pointSize, in: 2...16, step: 1)
+                                        .frame(width: 120)
+                                }
 
-                Divider()
+                                LabeledContent("Opacity") {
+                                    Slider(value: $config.pointAlpha, in: 0.1...1.0, step: 0.05)
+                                        .frame(width: 120)
+                                }
+                            }
+                        }
 
-                // MARK: - Style section
-                sectionHeader("Style")
-
-                VStack(alignment: .leading, spacing: 8) {
-                    if appState.selectedChartType.hasErrorBars {
-                        LabeledContent("Error Bars") {
-                            Picker("", selection: $config.errorType) {
-                                ForEach(ChartConfig.ErrorType.allCases) { type in
-                                    Text(type.rawValue).tag(type)
+                        LabeledContent("Axis Style") {
+                            Picker("", selection: $config.axisStyle) {
+                                ForEach(ChartConfig.AxisStyle.allCases) { style in
+                                    Text(style.rawValue).tag(style)
                                 }
                             }
                             .labelsHidden()
-                            .frame(width: 100)
+                            .frame(width: 160)
                         }
                     }
 
-                    if appState.selectedChartType.hasPoints {
-                        Toggle("Show data points", isOn: $config.showPoints)
+                    Divider()
 
-                        if config.showPoints {
-                            LabeledContent("Point size") {
-                                Slider(value: $config.pointSize, in: 2...16, step: 1)
-                                    .frame(width: 120)
-                            }
-
-                            LabeledContent("Opacity") {
-                                Slider(value: $config.pointAlpha, in: 0.1...1.0, step: 0.05)
-                                    .frame(width: 120)
-                            }
+                    // MARK: - Generate
+                    Button {
+                        Task { await appState.generatePlot() }
+                    } label: {
+                        HStack {
+                            Image(systemName: "play.fill")
+                            Text("Generate Plot")
                         }
+                        .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .disabled(appState.isLoading || config.excelPath.isEmpty)
 
-                    LabeledContent("Axis Style") {
-                        Picker("", selection: $config.axisStyle) {
-                            ForEach(ChartConfig.AxisStyle.allCases) { style in
-                                Text(style.rawValue).tag(style)
-                            }
-                        }
-                        .labelsHidden()
-                        .frame(width: 160)
-                    }
+                    Spacer()
                 }
-
-                Divider()
-
-                // MARK: - Generate
-                Button {
-                    Task { await appState.generatePlot() }
-                } label: {
-                    HStack {
-                        Image(systemName: "play.fill")
-                        Text("Generate Plot")
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .disabled(appState.isLoading || config.excelPath.isEmpty)
-
-                Spacer()
+                .padding()
             }
-            .padding()
+        } else {
+            Text("Select a graph sheet")
+                .foregroundStyle(.secondary)
         }
-        .navigationTitle("Configuration")
     }
 
     // MARK: - Helpers
 
-    private var fileDisplayName: String {
-        if appState.chartConfig.excelPath.isEmpty {
+    private func fileDisplayName(for config: ChartConfig) -> String {
+        if config.excelPath.isEmpty {
             return "No file selected"
         }
-        return URL(fileURLWithPath: appState.chartConfig.excelPath).lastPathComponent
+        return URL(fileURLWithPath: config.excelPath).lastPathComponent
     }
 
     private func sectionHeader(_ title: String) -> some View {

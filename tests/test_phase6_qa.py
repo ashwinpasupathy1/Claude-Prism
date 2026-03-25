@@ -115,18 +115,29 @@ class TestSchemaCompleteness:
 
     def test_scatter_analyzer(self):
         result = analyze("scatter", self.xy_path)
-        self._check_result(result)
+        assert result["ok"] is True
         assert result["chart_type"] == "scatter"
+        assert "data" in result
+        assert "series" in result["data"]
+        assert "x_values" in result["data"]
 
     def test_line_analyzer(self):
         result = analyze("line", self.xy_path)
-        self._check_result(result)
+        assert result["ok"] is True
         assert result["chart_type"] == "line"
+        assert "data" in result
+        assert "series" in result["data"]
 
     def test_grouped_bar_analyzer(self):
         result = analyze("grouped_bar", self.grouped_path)
-        self._check_result(result)
+        assert isinstance(result, dict)
+        assert result["ok"] is True
         assert result["chart_type"] == "grouped_bar"
+        # Dedicated analyzer returns data payload with categories/subgroups/means
+        assert "data" in result
+        assert "categories" in result["data"]
+        assert "subgroups" in result["data"]
+        assert "means" in result["data"]
 
     def test_to_dict_has_canonical_keys(self):
         result = analyze("bar", self.bar_path)
@@ -467,9 +478,9 @@ class TestFeatureChecklist:
         assert len(types) >= 8, f"Expected >= 8 analyzers, got {len(types)}: {types}"
 
     def test_swift_renderer_exists(self):
-        """Check Swift BarRenderer exists."""
-        swift_path = os.path.join(_ROOT, "RefractionApp", "Refraction",
-                                  "Renderers", "BarRenderer.swift")
+        """Check Swift BarRenderer exists in RefractionRenderer package."""
+        swift_path = os.path.join(_ROOT, "RefractionRenderer", "Sources",
+                                  "RefractionRenderer", "BarRenderer.swift")
         assert os.path.exists(swift_path), "BarRenderer.swift not found"
 
     def test_swift_chart_config_exists(self):
@@ -478,8 +489,9 @@ class TestFeatureChecklist:
         assert os.path.exists(swift_path), "ChartConfig.swift not found"
 
     def test_swift_chart_spec_exists(self):
-        swift_path = os.path.join(_ROOT, "RefractionApp", "Refraction",
-                                  "Models", "ChartSpec.swift")
+        """Check Swift ChartSpec exists in RefractionRenderer package."""
+        swift_path = os.path.join(_ROOT, "RefractionRenderer", "Sources",
+                                  "RefractionRenderer", "ChartSpec.swift")
         assert os.path.exists(swift_path), "ChartSpec.swift not found"
 
 

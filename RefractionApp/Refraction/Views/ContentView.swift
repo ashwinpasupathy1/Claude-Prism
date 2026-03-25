@@ -1,6 +1,5 @@
-// ContentView.swift — Root view with 3-column NavigationSplitView.
-// Sidebar: chart type selector. Content: chart canvas / welcome / error.
-// Detail: config panel.
+// ContentView.swift — Root view with permanent sidebar + toolbar banner.
+// Uses GeometryReader + HStack for stable layout (no HSplitView).
 
 import SwiftUI
 
@@ -9,67 +8,100 @@ struct ContentView: View {
     @Environment(AppState.self) private var appState
     @Environment(PythonServer.self) private var server
 
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    @State private var sidebarWidth: CGFloat = 240
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            ChartSidebarView()
-                .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
-        } content: {
-            chartArea
-                .navigationSplitViewColumnWidth(min: 400, ideal: 600)
-        } detail: {
-            DataTabView()
-                .navigationSplitViewColumnWidth(min: 260, ideal: 300, max: 360)
+        VStack(spacing: 0) {
+            // Prism-style toolbar banner
+            ToolbarBanner()
+
+            // Main content: fixed sidebar + detail
+            HStack(spacing: 0) {
+                // Left: permanent navigator sidebar
+                NavigatorView()
+                    .frame(width: sidebarWidth)
+                    .background(Color(nsColor: .controlBackgroundColor))
+
+                // Draggable divider
+                Rectangle()
+                    .fill(Color(nsColor: .separatorColor))
+                    .frame(width: 1)
+                    .onHover { hovering in
+                        if hovering {
+                            NSCursor.resizeLeftRight.push()
+                        } else {
+                            NSCursor.pop()
+                        }
+                    }
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                let newWidth = sidebarWidth + value.translation.width
+                                sidebarWidth = min(max(newWidth, 180), 400)
+                            }
+                    )
+
+                // Right: active sheet content
+                contentArea
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .onChange(of: appState.projectDisplayName) { _, newTitle in
+            NSApplication.shared.mainWindow?.title = newTitle
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                NSApplication.shared.mainWindow?.title = appState.projectDisplayName
+            }
         }
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                serverStatusIndicator
-
                 Button {
-                    Task { await appState.generatePlot() }
+                    appState.developerMode.toggle()
                 } label: {
-                    Label("Generate", systemImage: "play.fill")
+                    Image(systemName: appState.developerMode ? "curlybraces.square.fill" : "curlybraces.square")
                 }
-                .keyboardShortcut(.return, modifiers: .command)
-                .disabled(appState.isLoading || appState.chartConfig.excelPath.isEmpty)
+                .help("Toggle Developer Mode (raw JSON)")
+
+                serverStatusIndicator
             }
         }
     }
 
-    // MARK: - Chart area
+    // MARK: - Content area: dispatch by sheet kind
 
     @ViewBuilder
-    private var chartArea: some View {
-        ZStack {
-            Color(nsColor: .controlBackgroundColor)
-                .ignoresSafeArea()
-
-            if appState.isLoading {
-                ProgressView("Generating chart...")
-                    .controlSize(.large)
-            } else if let error = appState.error {
-                ErrorView(
-                    errorMessage: error,
-                    onRetry: {
-                        Task { await appState.retryLastAction() }
-                    },
-                    onDismiss: {
-                        appState.dismissError()
-                    }
-                )
-            } else if appState.currentSpec != nil {
-                ChartCanvasView()
-            } else if !appState.hasFileLoaded {
-                WelcomeView()
-            } else {
-                VStack(spacing: 16) {
-                    Image(systemName: "chart.bar.fill")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.quaternary)
-                    Text("Click Generate to create your chart")
-                        .foregroundStyle(.secondary)
+    private var contentArea: some View {
+        if let error = appState.error {
+            ErrorView(
+                errorMessage: error,
+                onRetry: {
+                    Task { await appState.retryLastAction() }
+                },
+                onDismiss: {
+                    appState.dismissError()
                 }
+            )
+        } else if let sheet = appState.activeSheet {
+            switch sheet.kind {
+            case .dataTable:
+                DataTableView()
+            case .graph:
+                GraphSheetView(sheet: sheet)
+            case .results:
+                ResultsSheetView(sheet: sheet)
+            case .info:
+                InfoSheetView(sheet: sheet)
+            }
+        } else if !appState.hasDataTables {
+            WelcomeView()
+        } else {
+            VStack(spacing: 16) {
+                Image(systemName: "sidebar.left")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.quaternary)
+                Text("Select a sheet from the navigator")
+                    .foregroundStyle(.secondary)
             }
         }
     }
