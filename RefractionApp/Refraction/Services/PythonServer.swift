@@ -383,11 +383,20 @@ final class PythonServer {
         }
 
         // Strategy 4: Search well-known development paths.
-        // List worktree paths BEFORE the main repo so we pick up
-        // the latest code when developing in a worktree.
+        // Check any active worktrees first (they have the latest code),
+        // then fall back to the main repo.
         let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let knownPaths = [
-            "\(home)/Documents/Claude Prism/.claude/worktrees/romantic-meninsky",
+        var knownPaths = [String]()
+
+        // Scan for worktrees under the main repo (they contain the latest dev code)
+        let worktreeDir = "\(home)/Documents/Claude Prism/.claude/worktrees"
+        if let entries = try? FileManager.default.contentsOfDirectory(atPath: worktreeDir) {
+            for entry in entries {
+                knownPaths.append("\(worktreeDir)/\(entry)")
+            }
+        }
+
+        knownPaths += [
             "\(home)/Documents/Claude Prism",
             "\(home)/Documents/Refraction",
         ]

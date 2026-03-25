@@ -18,14 +18,13 @@ Never commit if tests fail.  Never skip it.
 ## Commands
 
 ```bash
-# Run the full test suite (4 suites, ~3 seconds)
+# Run the full test suite (727 tests, ~3 seconds)
 python3 run_all.py
 
 # Run a single suite
-python3 run_all.py stats              # 0 tests -- statistical verification
-python3 run_all.py validators         # 0 tests -- spreadsheet validators
-python3 run_all.py specs              # 0 tests -- analysis engine + server
-python3 run_all.py api                # 0 tests -- FastAPI endpoint tests
+python3 run_all.py stats              # 56 tests -- statistical verification
+python3 run_all.py validators         # 35 tests -- spreadsheet validators
+python3 run_all.py api                # 16 tests -- FastAPI endpoint tests
 
 # Run the app locally
 # 1. Start the Python backend (in a terminal):
