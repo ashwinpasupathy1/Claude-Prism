@@ -1,0 +1,39 @@
+name: Refraction
+options:
+  bundleIdPrefix: com.anthropic
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: false
+
+packages:
+  RefractionRenderer:
+    path: ../RefractionRenderer
+
+targets:
+  Refraction:
+    type: application
+    platform: macOS
+    sources:
+      - path: Refraction
+        excludes:
+          - "**/.DS_Store"
+    resources:
+      - path: Refraction/Assets.xcassets
+      - path: Refraction/Resources/SampleData
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.anthropic.refraction
+        PRODUCT_NAME: Refraction
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.9"
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_ENTITLEMENTS: Refraction/Refraction.entitlements
+        INFOPLIST_KEY_CFBundleDisplayName: Refraction
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.education"
+        GENERATE_INFOPLIST_FILE: YES
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+    dependencies:
+      - package: RefractionRenderer
