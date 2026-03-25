@@ -10,7 +10,7 @@ struct ResultsView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        if let spec = appState.currentSpec, let stats = spec.stats {
+        if let spec = appState.activeSheet?.chartSpec, let stats = spec.stats {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
 

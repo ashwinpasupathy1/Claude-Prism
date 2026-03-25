@@ -13,18 +13,5 @@
       "Grep",
       "Agent"
     ]
-  },
-  "hooks": {
-    "SessionStart": [
-      {
-        "matcher": "startup",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 .claude/hooks/update_docs.py"
-          }
-        ]
-      }
-    ]
   }
 }

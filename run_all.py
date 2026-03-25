@@ -45,6 +45,7 @@ def main():
         "validators": os.path.join(_HERE, "tests", "test_validators.py"),
         "analysis": os.path.join(_HERE, "tests", "test_analysis.py"),
         "deficiency": os.path.join(_HERE, "tests", "test_deficiency_fixes.py"),
+        "render": os.path.join(_HERE, "tests", "test_render_contract.py"),
     }
 
     requested = args.suites if args.suites else list(SUITES.keys())

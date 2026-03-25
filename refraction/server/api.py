@@ -188,18 +188,31 @@ def _make_app():
             "#6B4226", "#048A81", "#D4AC0D", "#3B1F2B", "#44BBA4",
         ]
 
+        import math
+
+        def _sanitize(v):
+            """Replace NaN/Inf with None for JSON safety."""
+            if v is None:
+                return None
+            if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                return None
+            return v
+
         # -- groups: nest values into {raw, mean, sem, sd, ci95, n} --
         groups = []
         for g in result.get("groups", []):
+            # Dedicated analyzers may return groups as plain strings (group names)
+            if isinstance(g, str):
+                continue
             raw = g.get("values", [])
             groups.append({
                 "name": g.get("name", ""),
                 "values": {
                     "raw": raw if isinstance(raw, list) else [],
-                    "mean": g.get("mean"),
-                    "sem": g.get("sem"),
-                    "sd": g.get("sd"),
-                    "ci95": g.get("ci95"),
+                    "mean": _sanitize(g.get("mean")),
+                    "sem": _sanitize(g.get("sem")),
+                    "sd": _sanitize(g.get("sd")),
+                    "ci95": _sanitize(g.get("ci95")),
                     "n": g.get("n", 0),
                 },
                 "color": g.get("color", palette[len(groups) % len(palette)]),
@@ -249,6 +262,7 @@ def _make_app():
         return {
             "chart_type": result.get("chart_type", "bar"),
             "groups": groups,
+            "data": result.get("data", {}),
             "style": {
                 "colors": [g["color"] for g in groups] or palette[:1],
                 "show_points": bool(config.get("show_points", False)),
@@ -305,6 +319,272 @@ def _make_app():
         with open(dest, "wb") as f:
             f.write(contents)
         return {"ok": True, "path": dest, "filename": file.filename}
+
+    # ── Data preview ──────────────────────────────────────────────
+    class DataPreviewRequest(BaseModel):
+        excel_path: str
+        sheet: int | str = 0
+
+    @api.post("/data-preview")
+    def data_preview(req: DataPreviewRequest):
+        """Return raw contents of an Excel/CSV file as JSON for read-only display."""
+        try:
+            import pandas as pd
+            if req.excel_path.endswith(".csv"):
+                df = pd.read_csv(req.excel_path, nrows=200)
+            else:
+                df = pd.read_excel(req.excel_path, sheet_name=req.sheet, nrows=200)
+
+            columns = [str(c) for c in df.columns]
+            rows = df.where(df.notna(), None).values.tolist()
+
+            return {
+                "ok": True,
+                "columns": columns,
+                "rows": rows,
+                "shape": [len(df), len(df.columns)],
+            }
+        except Exception as exc:
+            return JSONResponse(
+                {"ok": False, "error": str(exc)}, status_code=400
+            )
+
+    # ── Recommend statistical test ──────────────────────────────────
+    class RecommendTestRequest(BaseModel):
+        excel_path: str
+        sheet: int | str = 0
+        paired: bool = False
+
+    @api.post("/recommend-test")
+    def recommend_test_endpoint(req: RecommendTestRequest):
+        """Recommend the best statistical test for the data."""
+        try:
+            import pandas as pd
+            from refraction.core.stats import recommend_test
+
+            if req.excel_path.endswith(".csv"):
+                df = pd.read_csv(req.excel_path)
+            else:
+                df = pd.read_excel(req.excel_path, sheet_name=req.sheet)
+
+            groups = {}
+            for col in df.columns:
+                vals = pd.to_numeric(df[col], errors="coerce").dropna().values
+                if len(vals) > 0:
+                    groups[str(col)] = vals
+
+            if not groups:
+                return {"ok": False, "error": "No numeric data found"}
+
+            result = recommend_test(groups, paired=req.paired)
+            return {"ok": True, **result}
+        except Exception as exc:
+            return JSONResponse(
+                {"ok": False, "error": str(exc)}, status_code=400
+            )
+
+    # ── Analyze Stats (standalone statistical analysis) ─────────────
+    class AnalyzeStatsRequest(BaseModel):
+        excel_path: str
+        sheet: int | str = 0
+        analysis_type: str  # e.g. "unpaired_t", "anova", "kruskal_wallis"
+        paired: bool = False
+        posthoc: str = "Tukey HSD"
+        mc_correction: str = "Holm-Bonferroni"
+        control: str | None = None
+
+    @api.post("/analyze-stats")
+    def analyze_stats_endpoint(req: AnalyzeStatsRequest):
+        """Run a statistical analysis and return results as JSON."""
+        try:
+            import math
+            import pandas as pd
+            from refraction.core.stats import (
+                _run_stats, _cohens_d, _p_to_stars,
+                calc_error, check_normality, descriptive_stats,
+                recommend_test,
+            )
+
+            # Read data
+            if req.excel_path.endswith(".csv"):
+                df = pd.read_csv(req.excel_path)
+            else:
+                df = pd.read_excel(req.excel_path, sheet_name=req.sheet)
+
+            # Extract numeric groups
+            import numpy as np
+            groups = {}
+            for col in df.columns:
+                vals = pd.to_numeric(df[col], errors="coerce").dropna().values
+                if len(vals) > 0:
+                    groups[str(col)] = vals
+
+            if not groups:
+                return JSONResponse(
+                    {"ok": False, "error": "No numeric data found"},
+                    status_code=400,
+                )
+
+            # Map analysis_type to _run_stats test_type
+            _type_map = {
+                "unpaired_t": "parametric",
+                "welch_t": "parametric",
+                "anova": "parametric",
+                "paired_t": "paired",
+                "wilcoxon": "paired",
+                "mann_whitney": "nonparametric",
+                "kruskal_wallis": "nonparametric",
+                "permutation": "permutation",
+                "one_sample": "one_sample",
+                "descriptive": "none",
+                "normality": "none",
+            }
+            test_type = _type_map.get(req.analysis_type, "parametric")
+
+            # Human-readable labels
+            _label_map = {
+                "unpaired_t": "Unpaired t-test",
+                "welch_t": "Welch's t-test",
+                "anova": "Ordinary one-way ANOVA",
+                "paired_t": "Paired t-test",
+                "wilcoxon": "Wilcoxon matched-pairs signed rank test",
+                "mann_whitney": "Mann-Whitney U test",
+                "kruskal_wallis": "Kruskal-Wallis test",
+                "permutation": "Permutation test",
+                "one_sample": "One-sample t-test",
+                "descriptive": "Descriptive statistics",
+                "normality": "Normality tests",
+            }
+            analysis_label = _label_map.get(req.analysis_type, req.analysis_type)
+
+            # Descriptive statistics for each group
+            descriptive = []
+            for name, vals in groups.items():
+                ds = descriptive_stats(vals)
+                ci95 = calc_error(vals, "ci95")[1] if len(vals) > 1 else float("nan")
+                descriptive.append({
+                    "group": name,
+                    "n": ds["n"],
+                    "mean": ds["mean"],
+                    "sd": ds["sd"],
+                    "sem": ds["sem"],
+                    "median": ds["median"],
+                    "ci95": ci95,
+                })
+
+            # Normality tests
+            norm_raw = check_normality(groups)
+            normality = {}
+            for name, (stat, p, is_normal, warning) in norm_raw.items():
+                normality[name] = {
+                    "stat": stat,
+                    "p": p,
+                    "normal": is_normal,
+                    "warning": warning,
+                }
+
+            # Run the statistical test
+            comparisons = []
+            summary = analysis_label
+            if test_type != "none":
+                raw_results = _run_stats(
+                    groups,
+                    test_type=test_type,
+                    control=req.control,
+                    mc_correction=req.mc_correction,
+                    posthoc=req.posthoc,
+                )
+                for (ga, gb, p, stars) in raw_results:
+                    comp = {
+                        "group_a": ga,
+                        "group_b": gb,
+                        "p_value": p if not (isinstance(p, float) and math.isnan(p)) else None,
+                        "stars": stars,
+                    }
+                    # Add effect size for pairwise comparisons
+                    if ga in groups and gb in groups:
+                        d = _cohens_d(groups[ga], groups[gb])
+                        comp["effect_size"] = d if not math.isnan(d) else None
+                        comp["effect_type"] = "Cohen's d"
+                    comparisons.append(comp)
+
+                # Build summary string
+                labels = list(groups.keys())
+                k = len(labels)
+                if test_type == "parametric" and k >= 3:
+                    from scipy import stats as sp_stats
+                    f_stat, f_p = sp_stats.f_oneway(*[groups[g] for g in labels])
+                    total_n = sum(len(groups[g]) for g in labels)
+                    summary = f"One-way ANOVA: F({k-1},{total_n-k}) = {f_stat:.2f}, p = {f_p:.4g}"
+                elif test_type == "parametric" and k == 2:
+                    from scipy import stats as sp_stats
+                    t_stat, t_p = sp_stats.ttest_ind(groups[labels[0]], groups[labels[1]])
+                    summary = f"Unpaired t-test: t = {t_stat:.3f}, p = {t_p:.4g}"
+                elif test_type == "nonparametric" and k == 2:
+                    from scipy import stats as sp_stats
+                    u_stat, u_p = sp_stats.mannwhitneyu(
+                        groups[labels[0]], groups[labels[1]], alternative="two-sided"
+                    )
+                    summary = f"Mann-Whitney U = {u_stat:.1f}, p = {u_p:.4g}"
+                elif test_type == "nonparametric" and k >= 3:
+                    from scipy import stats as sp_stats
+                    h_stat, h_p = sp_stats.kruskal(*[groups[g] for g in labels])
+                    summary = f"Kruskal-Wallis H = {h_stat:.2f}, p = {h_p:.4g}"
+                elif test_type == "paired" and k == 2:
+                    from scipy import stats as sp_stats
+                    n = min(len(groups[labels[0]]), len(groups[labels[1]]))
+                    t_stat, t_p = sp_stats.ttest_rel(
+                        groups[labels[0]][:n], groups[labels[1]][:n]
+                    )
+                    summary = f"Paired t-test: t = {t_stat:.3f}, p = {t_p:.4g}"
+
+            # Get recommendation
+            try:
+                rec = recommend_test(groups, paired=req.paired)
+                recommendation = {
+                    "test": rec["test"],
+                    "test_label": rec["test_label"],
+                    "posthoc": rec.get("posthoc"),
+                    "justification": rec["justification"],
+                }
+            except Exception:
+                recommendation = None
+
+            def _sanitize_val(v):
+                if v is None:
+                    return None
+                if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                    return None
+                if isinstance(v, (np.integer,)):
+                    return int(v)
+                if isinstance(v, (np.floating,)):
+                    return float(v)
+                return v
+
+            # Sanitize all numeric values for JSON
+            for d in descriptive:
+                for key in d:
+                    d[key] = _sanitize_val(d[key])
+            for c in comparisons:
+                for key in c:
+                    c[key] = _sanitize_val(c[key])
+
+            return {
+                "ok": True,
+                "analysis_type": req.analysis_type,
+                "analysis_label": analysis_label,
+                "recommendation": recommendation,
+                "descriptive": descriptive,
+                "normality": normality,
+                "comparisons": comparisons,
+                "summary": summary,
+            }
+
+        except Exception as exc:
+            _log.exception("analyze-stats failed")
+            return JSONResponse(
+                {"ok": False, "error": str(exc)}, status_code=500
+            )
 
     # ── Phase 10a: Multi-panel layout ──────────────────────────────
     class LayoutRequest(BaseModel):
@@ -409,6 +689,118 @@ def _make_app():
             return JSONResponse({"ok": False, "error": str(e)}, status_code=400)
         except Exception as e:
             _log.exception("transform failed")
+            return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+    # ── Save as .refract file ────────────────────────────────────
+    class SaveRefractRequest(BaseModel):
+        output_path: str
+        project: dict[str, Any]
+
+    @api.post("/project/save-refract")
+    def save_refract(req: SaveRefractRequest):
+        """Save the current project as a .refract ZIP file.
+
+        The project dict from Swift contains the full navigator state:
+        dataTables, activeDataTableID, activeSheetID, plus chart configs
+        and format settings embedded in each sheet.
+        """
+        import json as _json
+        import time as _time
+        import zipfile as _zipfile
+
+        try:
+            import pandas as pd
+
+            output_path = req.output_path
+            if not output_path.endswith(".refract"):
+                output_path += ".refract"
+
+            # Ensure parent directory exists
+            parent = os.path.dirname(output_path)
+            if parent:
+                os.makedirs(parent, exist_ok=True)
+
+            project = req.project
+            data_tables = project.get("dataTables", [])
+
+            with _zipfile.ZipFile(output_path, "w", _zipfile.ZIP_DEFLATED) as zf:
+                # 1. manifest.json
+                manifest = {
+                    "format_version": 3,
+                    "app_version": "10.0.0",
+                    "created": _time.time(),
+                    "created_iso": _time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+                }
+                zf.writestr("manifest.json", _json.dumps(manifest, indent=2))
+
+                # 2. Build sanitized project.json — strip absolute paths,
+                #    embed data refs for portable archives
+                sanitized = _json.loads(_json.dumps(project))  # deep copy
+                data_file_map: dict[str, str] = {}  # orig path -> archive name
+
+                for i, table in enumerate(sanitized.get("dataTables", [])):
+                    data_path = table.get("dataFilePath", "") or ""
+                    if data_path and os.path.exists(data_path):
+                        if data_path not in data_file_map:
+                            archive_name = f"data/table_{i}.csv"
+                            data_file_map[data_path] = archive_name
+                        table["dataRef"] = data_file_map[data_path]
+                    else:
+                        table["dataRef"] = ""
+                    # Remove absolute path from archive
+                    table.pop("dataFilePath", None)
+
+                # 3. data/ — embed data files as CSV for portability
+                for orig_path, archive_name in data_file_map.items():
+                    try:
+                        ext = os.path.splitext(orig_path)[1].lower()
+                        if ext == ".csv":
+                            with open(orig_path, "r") as f:
+                                zf.writestr(archive_name, f.read())
+                        else:
+                            df = pd.read_excel(orig_path)
+                            zf.writestr(archive_name, df.to_csv(index=False))
+                    except Exception:
+                        # Fallback: try to embed original file as-is
+                        try:
+                            zf.write(orig_path, archive_name)
+                        except Exception:
+                            _log.warning("Could not embed data file: %s", orig_path)
+
+                # 4. charts/ — save chart configs and format settings per graph sheet
+                for i, table in enumerate(data_tables):
+                    for j, sheet in enumerate(table.get("sheets", [])):
+                        if sheet.get("kind") == "graph":
+                            chart_data = {
+                                "chartType": sheet.get("chartType"),
+                                "chartConfig": sheet.get("chartConfig"),
+                                "formatSettings": sheet.get("formatSettings"),
+                                "formatAxesSettings": sheet.get("formatAxesSettings"),
+                            }
+                            zf.writestr(
+                                f"charts/table_{i}_sheet_{j}.json",
+                                _json.dumps(chart_data, indent=2),
+                            )
+
+                # 5. results/ — save analysis results per results sheet
+                for i, table in enumerate(data_tables):
+                    for j, sheet in enumerate(table.get("sheets", [])):
+                        if sheet.get("kind") == "results":
+                            results_data = {
+                                "statsResults": sheet.get("statsResults"),
+                            }
+                            zf.writestr(
+                                f"results/table_{i}_sheet_{j}.json",
+                                _json.dumps(results_data, indent=2),
+                            )
+
+                # Write project.json with dataRef pointers
+                zf.writestr("project.json", _json.dumps(sanitized, indent=2))
+
+            return {"ok": True, "path": output_path}
+
+        except Exception as e:
+            _log.exception("save-refract failed")
             return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
     # ── Phase 10e: Project files ─────────────────────────────────

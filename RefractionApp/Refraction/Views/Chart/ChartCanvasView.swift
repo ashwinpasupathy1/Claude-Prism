@@ -1,4 +1,4 @@
-// ChartCanvasView.swift — SwiftUI Canvas that renders the current ChartSpec
+// ChartCanvasView.swift — SwiftUI Canvas that renders a ChartSpec
 // using native Core Graphics via the renderer modules.
 
 import SwiftUI
@@ -6,7 +6,7 @@ import RefractionRenderer
 
 struct ChartCanvasView: View {
 
-    @Environment(AppState.self) private var appState
+    let spec: ChartSpec
 
     /// Insets from the canvas edge to the plot area (axes region).
     private let plotInsets = EdgeInsets(top: 40, leading: 60, bottom: 50, trailing: 20)
@@ -14,8 +14,6 @@ struct ChartCanvasView: View {
     var body: some View {
         GeometryReader { geometry in
             Canvas { context, size in
-                guard let spec = appState.currentSpec else { return }
-
                 let plotRect = CGRect(
                     x: plotInsets.leading,
                     y: plotInsets.top,
@@ -35,15 +33,103 @@ struct ChartCanvasView: View {
 
                 // 2. Dispatch to the appropriate chart renderer
                 switch spec.chartType {
-                case "bar", "grouped_bar":
+
+                // ── Working renderers ────────────────────────────
+
+                case "bar", "column_stats", "waterfall", "pyramid":
                     BarRenderer.draw(
                         in: context,
                         plotRect: plotRect,
                         groups: spec.groups,
                         style: spec.style
                     )
+
+                case "grouped_bar":
+                    GroupedBarRenderer.draw(
+                        in: context,
+                        plotRect: plotRect,
+                        spec: spec,
+                        style: spec.style
+                    )
+
+                case "stacked_bar":
+                    StackedBarRenderer.draw(
+                        in: context,
+                        plotRect: plotRect,
+                        spec: spec,
+                        style: spec.style
+                    )
+
+                case "box":
+                    BoxRenderer.draw(
+                        in: context,
+                        plotRect: plotRect,
+                        groups: spec.groups,
+                        style: spec.style
+                    )
+
+                case "violin":
+                    ViolinRenderer.draw(
+                        in: context,
+                        plotRect: plotRect,
+                        groups: spec.groups,
+                        style: spec.style
+                    )
+
+                case "scatter":
+                    ScatterRenderer.draw(
+                        in: context,
+                        plotRect: plotRect,
+                        groups: spec.groups,
+                        style: spec.style,
+                        data: spec.data
+                    )
+
+                case "line":
+                    LineRenderer.draw(
+                        in: context,
+                        plotRect: plotRect,
+                        groups: spec.groups,
+                        style: spec.style,
+                        data: spec.data
+                    )
+
+                case "histogram":
+                    HistogramRenderer.draw(
+                        in: context,
+                        plotRect: plotRect,
+                        groups: spec.groups,
+                        style: spec.style
+                    )
+
+                case "before_after":
+                    BeforeAfterRenderer.draw(
+                        in: context,
+                        plotRect: plotRect,
+                        groups: spec.groups,
+                        style: spec.style
+                    )
+
+                case "dot_plot", "subcolumn_scatter":
+                    DotPlotRenderer.draw(
+                        in: context,
+                        plotRect: plotRect,
+                        groups: spec.groups,
+                        style: spec.style
+                    )
+
+                // ── Not yet implemented — show placeholder ──────
+
+                case "area_chart", "curve_fit", "bubble",
+                     "lollipop", "ecdf", "qq_plot",
+                     "raincloud",
+                     "kaplan_meier", "forest_plot",
+                     "bland_altman", "contingency", "chi_square_gof",
+                     "heatmap", "two_way_anova",
+                     "repeated_measures":
+                    drawPlaceholder(in: context, size: size, chartType: spec.chartType)
+
                 default:
-                    // Fallback: draw bars for any chart type with group data
                     if !spec.groups.isEmpty {
                         BarRenderer.draw(
                             in: context,
@@ -96,7 +182,6 @@ struct ChartCanvasView: View {
         refLine: ReferenceLine,
         spec: ChartSpec
     ) {
-        // Compute Y position from data range
         let yRange = computeYRange(groups: spec.groups)
         guard yRange.max > yRange.min else { return }
 

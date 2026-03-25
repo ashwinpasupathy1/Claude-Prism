@@ -28,74 +28,25 @@ public struct ChartSpec: Decodable {
     public let stats: StatsResult?
     public let brackets: [Bracket]
     public let referenceLine: ReferenceLine?
+    /// Chart-type-specific data payload from dedicated analyzers.
+    public let data: [String: JSONValue]?
 
     enum CodingKeys: String, CodingKey {
         case chartType = "chart_type"
-        case groups, style, axes, stats, brackets
+        case groups, style, axes, stats, brackets, data
         case referenceLine = "reference_line"
     }
 
-    /// Decode from Plotly JSON format (`{ data: [...], layout: {...} }`).
-    /// Transforms Plotly traces + layout into our renderer-independent model.
     public init(from decoder: Decoder) throws {
-        // Try our native format first
-        if let container = try? decoder.container(keyedBy: CodingKeys.self),
-           let ct = try? container.decode(String.self, forKey: .chartType) {
-            chartType = ct
-            groups = (try? container.decode([GroupData].self, forKey: .groups)) ?? []
-            style = (try? container.decode(StyleSpec.self, forKey: .style)) ?? StyleSpec()
-            axes = (try? container.decode(AxisSpec.self, forKey: .axes)) ?? AxisSpec()
-            stats = try? container.decode(StatsResult.self, forKey: .stats)
-            brackets = (try? container.decode([Bracket].self, forKey: .brackets)) ?? []
-            referenceLine = try? container.decode(ReferenceLine.self, forKey: .referenceLine)
-            return
-        }
-
-        // Fall back to Plotly JSON format
-        let container = try decoder.container(keyedBy: PlotlyCodingKeys.self)
-        let traces = (try? container.decode([PlotlyTrace].self, forKey: .data)) ?? []
-        let layout = (try? container.decode(PlotlyLayout.self, forKey: .layout)) ?? PlotlyLayout()
-
-        chartType = "bar"
-        groups = traces.enumerated().map { idx, trace in
-            GroupData(
-                name: trace.name ?? "Group \(idx + 1)",
-                values: ValuesData(
-                    raw: trace.y ?? [],
-                    mean: trace.y?.first,
-                    sem: trace.errorY?.array?.first,
-                    sd: nil,
-                    ci95: nil,
-                    n: trace.y?.count ?? 0
-                ),
-                color: trace.markerColor ?? StyleSpec.defaultColors[idx % StyleSpec.defaultColors.count]
-            )
-        }
-        style = StyleSpec(
-            colors: traces.compactMap { $0.markerColor },
-            showPoints: false,
-            showBrackets: true,
-            pointSize: 6.0,
-            pointAlpha: 0.8,
-            barWidth: 0.6,
-            errorType: "sem",
-            axisStyle: "open"
-        )
-        axes = AxisSpec(
-            title: layout.title?.text ?? "",
-            xLabel: layout.xaxis?.title?.text ?? "",
-            yLabel: layout.yaxis?.title?.text ?? "",
-            xScale: "linear",
-            yScale: "linear",
-            xRange: nil,
-            yRange: nil,
-            tickDirection: "out",
-            spineWidth: 1.0,
-            fontSize: Double(layout.font?.size ?? 12)
-        )
-        stats = nil
-        brackets = []
-        referenceLine = nil
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        chartType = (try? container.decode(String.self, forKey: .chartType)) ?? "bar"
+        groups = (try? container.decode([GroupData].self, forKey: .groups)) ?? []
+        style = (try? container.decode(StyleSpec.self, forKey: .style)) ?? StyleSpec()
+        axes = (try? container.decode(AxisSpec.self, forKey: .axes)) ?? AxisSpec()
+        stats = try? container.decode(StatsResult.self, forKey: .stats)
+        brackets = (try? container.decode([Bracket].self, forKey: .brackets)) ?? []
+        referenceLine = try? container.decode(ReferenceLine.self, forKey: .referenceLine)
+        data = try? container.decode([String: JSONValue].self, forKey: .data)
     }
 
     /// Memberwise initializer for programmatic construction.
@@ -106,7 +57,8 @@ public struct ChartSpec: Decodable {
         axes: AxisSpec = AxisSpec(),
         stats: StatsResult? = nil,
         brackets: [Bracket] = [],
-        referenceLine: ReferenceLine? = nil
+        referenceLine: ReferenceLine? = nil,
+        data: [String: JSONValue]? = nil
     ) {
         self.chartType = chartType
         self.groups = groups
@@ -115,6 +67,7 @@ public struct ChartSpec: Decodable {
         self.stats = stats
         self.brackets = brackets
         self.referenceLine = referenceLine
+        self.data = data
     }
 }
 
@@ -336,79 +289,72 @@ public struct AxisSpec: Decodable {
     }
 }
 
-// MARK: - Plotly JSON intermediate types (for decoding /render responses)
+// MARK: - JSONValue (recursive type for arbitrary JSON payloads)
 
-private enum PlotlyCodingKeys: String, CodingKey {
-    case data, layout
-}
+/// A type-safe representation of arbitrary JSON values.
+/// Used for the `data` field on ChartSpec to carry chart-type-specific payloads.
+public indirect enum JSONValue: Decodable, Equatable {
+    case string(String)
+    case number(Double)
+    case bool(Bool)
+    case array([JSONValue])
+    case object([String: JSONValue])
+    case null
 
-private struct PlotlyTrace: Decodable {
-    let x: [AnyCodable]?
-    let y: [Double]?
-    let name: String?
-    let markerColor: String?
-    let errorY: PlotlyErrorY?
-
-    enum CodingKeys: String, CodingKey {
-        case x, y, name
-        case markerColor = "marker_color"
-        case errorY = "error_y"
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        x = try? container.decode([AnyCodable].self, forKey: .x)
-        y = try? container.decode([Double].self, forKey: .y)
-        name = try? container.decode(String.self, forKey: .name)
-        errorY = try? container.decode(PlotlyErrorY.self, forKey: .errorY)
-
-        if let mc = try? container.decode(String.self, forKey: .markerColor) {
-            markerColor = mc
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let b = try? container.decode(Bool.self) {
+            self = .bool(b)
+        } else if let d = try? container.decode(Double.self) {
+            self = .number(d)
+        } else if let s = try? container.decode(String.self) {
+            self = .string(s)
+        } else if let arr = try? container.decode([JSONValue].self) {
+            self = .array(arr)
+        } else if let obj = try? container.decode([String: JSONValue].self) {
+            self = .object(obj)
         } else {
-            struct Marker: Decodable { let color: String? }
-            enum MarkerKey: String, CodingKey { case marker }
-            if let markerContainer = try? decoder.container(keyedBy: MarkerKey.self),
-               let marker = try? markerContainer.decode(Marker.self, forKey: .marker) {
-                markerColor = marker.color
-            } else {
-                markerColor = nil
-            }
+            self = .null
         }
     }
-}
 
-private struct PlotlyErrorY: Decodable {
-    let type: String?
-    let array: [Double]?
-    let visible: Bool?
-}
+    /// Extract as String, or nil.
+    public var stringValue: String? {
+        if case .string(let s) = self { return s }
+        return nil
+    }
 
-private struct PlotlyLayout: Decodable {
-    let title: PlotlyTitle?
-    let xaxis: PlotlyAxis?
-    let yaxis: PlotlyAxis?
-    let font: PlotlyFont?
+    /// Extract as Double, or nil.
+    public var doubleValue: Double? {
+        if case .number(let d) = self { return d }
+        return nil
+    }
 
-    init(title: PlotlyTitle? = nil, xaxis: PlotlyAxis? = nil,
-         yaxis: PlotlyAxis? = nil, font: PlotlyFont? = nil) {
-        self.title = title
-        self.xaxis = xaxis
-        self.yaxis = yaxis
-        self.font = font
+    /// Extract as array of JSONValue, or nil.
+    public var arrayValue: [JSONValue]? {
+        if case .array(let a) = self { return a }
+        return nil
+    }
+
+    /// Extract as dictionary, or nil.
+    public var objectValue: [String: JSONValue]? {
+        if case .object(let o) = self { return o }
+        return nil
+    }
+
+    /// Extract as array of Strings.
+    public var stringArray: [String]? {
+        arrayValue?.compactMap(\.stringValue)
+    }
+
+    /// Extract as array of Doubles.
+    public var doubleArray: [Double]? {
+        arrayValue?.compactMap(\.doubleValue)
     }
 }
 
-private struct PlotlyTitle: Decodable {
-    let text: String?
-}
-
-private struct PlotlyAxis: Decodable {
-    let title: PlotlyTitle?
-}
-
-private struct PlotlyFont: Decodable {
-    let size: Int?
-}
 
 // MARK: - AnyCodable helper
 

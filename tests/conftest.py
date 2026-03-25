@@ -105,10 +105,16 @@ def _grouped_excel(categories: List[str], subgroups: List[str],
                    path: Optional[str] = None) -> str:
     """Grouped bar layout."""
     path = path or _tmp_path()
-    all_vals = [v for cat in categories for sub in subgroups
-                for v in (data[cat].get(sub) or [])]
-    max_n = max(len(data[cat].get(sub, [])) for cat in categories
-                for sub in subgroups) if all_vals else 1
+    all_vals = []
+    for cat in categories:
+        for sub in subgroups:
+            arr = data[cat].get(sub)
+            if arr is not None:
+                all_vals.extend(arr)
+    max_n = max(
+        (len(data[cat].get(sub, [])) for cat in categories for sub in subgroups),
+        default=1,
+    ) if all_vals else 1
     row1 = [cat for cat in categories for _ in subgroups]
     row2 = [sub for _ in categories for sub in subgroups]
     rows = [row1, row2]

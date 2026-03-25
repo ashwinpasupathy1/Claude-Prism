@@ -218,6 +218,64 @@ would pass most statistical tests.
 
 ---
 
+## Statistical Implementation — Manual Verification Against R/Prism
+
+These custom implementations need verification against GraphPad Prism, R, or
+SPSS using known datasets. Create a small dataset (3 groups, 5-10 values each),
+run in both Refraction and the reference tool, compare output. Differences
+< 1e-4 are acceptable. Document results in `tests/verification/`.
+
+### Needs Verification
+
+- [ ] **Two-way ANOVA (Type III SS)** — `refraction/core/stats.py: _twoway_anova()`
+  - Compare against: R `car::Anova(type="III")` or Prism two-way ANOVA
+  - Check: F-statistics, p-values, eta-squared, partial eta-squared for both
+    main effects and interaction
+
+- [ ] **Two-way posthoc (pairwise t)** — `refraction/core/stats.py: _twoway_posthoc()`
+  - Compare against: R `emmeans::emmeans()` pairwise comparisons
+  - Check: p-values with Holm correction match
+
+- [ ] **Dunnett's test (vs control)** — `refraction/core/stats.py: _run_stats()` Dunnett branch
+  - Compare against: R `multcomp::glht(mcp(group="Dunnett"))`
+  - Check: p-values for each treatment vs control
+
+- [ ] **Games-Howell posthoc** — `refraction/core/stats.py: _run_stats()` Games-Howell branch
+  - Compare against: R `PMCMRplus::gamesHowellTest()` or `userfriendlyscience::posthocTGH()`
+  - Check: p-values for each pairwise comparison
+
+- [ ] **Log-rank test (Mantel-Cox)** — `refraction/core/stats.py: _logrank_test()`
+  - Compare against: R `survival::survdiff()`
+  - Check: chi-square statistic and p-value
+
+- [ ] **KM curve Greenwood CI** — `refraction/core/stats.py: _km_curve()`
+  - Compare against: R `survival::survfit()` confidence bounds
+  - Check: survival probabilities and 95% CI at each time point
+
+### Already Verified (automated tests confirm to 1e-10 precision)
+
+- [x] Tukey HSD p-values — vs `scipy.stats.studentized_range.cdf`
+- [x] Dunn's test z-statistics — vs manual rank-based computation
+- [x] Cohen's d / Hedges' g — vs manual pooled SD formula (3 datasets)
+- [x] Rank-biserial r — vs Mann-Whitney U formula
+- [x] Holm-Bonferroni correction — verified step-down ordering
+- [x] Benjamini-Hochberg FDR — verified step-up ordering and q-values
+- [x] `_calc_error` SEM/SD/CI95 — vs `scipy.stats.t.ppf`
+
+### Uses scipy directly (inherently correct, no verification needed)
+
+- Welch's t-test → `scipy.stats.ttest_ind(equal_var=False)`
+- Mann-Whitney U → `scipy.stats.mannwhitneyu`
+- Kruskal-Wallis → `scipy.stats.kruskal`
+- Paired t-test → `scipy.stats.ttest_rel`
+- One-way ANOVA F → `scipy.stats.f_oneway`
+- Shapiro-Wilk → `scipy.stats.shapiro`
+- Levene's test → `scipy.stats.levene`
+- Pearson correlation → `scipy.stats.pearsonr`
+- Spearman correlation → `scipy.stats.spearmanr`
+
+---
+
 ## Statistical Engine Deep Dive
 
 Line-by-line audit of every statistical computation in

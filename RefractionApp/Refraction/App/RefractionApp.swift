@@ -1,6 +1,6 @@
 // RefractionApp.swift — Main entry point for the Refraction macOS app.
 // Launches the Python analysis server on appear and stops it on disappear.
-// Includes About dialog and crash alert handling.
+// Title bar shows project filename.
 
 import SwiftUI
 
@@ -17,8 +17,10 @@ struct RefractionApp: App {
                 .environment(pythonServer)
                 .onAppear {
                     pythonServer.start()
+                    appState.loadProjectIfExists()
                 }
                 .onDisappear {
+                    appState.saveProject()
                     pythonServer.stop()
                 }
                 .alert(
@@ -35,13 +37,26 @@ struct RefractionApp: App {
                         }
                     },
                     message: {
-                        Text(pythonServer.lastCrashMessage ?? "The analysis engine stopped unexpectedly. A crash log has been saved to ~/Library/Logs/Refraction/crash.log")
+                        Text(pythonServer.lastCrashMessage ?? "The analysis engine stopped unexpectedly.")
                     }
                 )
         }
         .windowStyle(.titleBar)
         .defaultSize(width: 1200, height: 800)
         .commands {
+            // File > Save (Cmd+S)
+            CommandGroup(after: .newItem) {
+                Button("Save") {
+                    Task { await appState.saveProjectFile() }
+                }
+                .keyboardShortcut("s", modifiers: .command)
+
+                Button("Save As...") {
+                    Task { await appState.saveProjectFileAs() }
+                }
+                .keyboardShortcut("s", modifiers: [.command, .shift])
+            }
+
             // Replace the default About menu item
             CommandGroup(replacing: .appInfo) {
                 Button("About Refraction") {

@@ -68,6 +68,7 @@ def analyze(
         try:
             kw = dict(cfg)
             kw["excel_path"] = excel_path
+            kw["_chart_type"] = chart_type
             spec = _DEDICATED_ANALYZERS[chart_type](kw)
             result = spec.to_dict()
             result["ok"] = True
@@ -199,6 +200,14 @@ _DEDICATED_ANALYZERS = {
     "contingency": _lazy_load_analyzer("contingency", "analyze_contingency"),
     "bland_altman": _lazy_load_analyzer("bland_altman", "analyze_bland_altman"),
     "chi_square_gof": _lazy_load_analyzer("chi_square_gof", "analyze_chi_square_gof"),
+    "grouped_bar": _lazy_load_analyzer("grouped_bar", "analyze_grouped_bar"),
+    "stacked_bar": _lazy_load_analyzer("grouped_bar", "analyze_grouped_bar"),
+    "two_way_anova": _lazy_load_analyzer("two_way_anova", "analyze_two_way_anova"),
+    "scatter": _lazy_load_analyzer("xy", "analyze_xy"),
+    "line": _lazy_load_analyzer("xy", "analyze_xy"),
+    "area_chart": _lazy_load_analyzer("xy", "analyze_xy"),
+    "curve_fit": _lazy_load_analyzer("xy", "analyze_xy"),
+    "bubble": _lazy_load_analyzer("xy", "analyze_xy"),
 }
 
 
