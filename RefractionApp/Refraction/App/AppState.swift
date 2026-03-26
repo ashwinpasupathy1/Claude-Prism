@@ -48,10 +48,16 @@ final class AppState {
 
     let undoManager = UndoManager()
 
-    /// Whether undo is available.
-    var canUndo: Bool { undoManager.canUndo }
-    /// Whether redo is available.
-    var canRedo: Bool { undoManager.canRedo }
+    /// Manually tracked undo/redo availability.
+    /// UndoManager doesn't notify @Observable, so we update these after each action.
+    var canUndo: Bool = false
+    var canRedo: Bool = false
+
+    /// Call after any action that might change undo/redo availability.
+    func refreshUndoState() {
+        canUndo = undoManager.canUndo
+        canRedo = undoManager.canRedo
+    }
 
     // MARK: - Experiment state
 
@@ -897,6 +903,7 @@ final class AppState {
 
     func markDirty() {
         hasUnsavedChanges = true
+        refreshUndoState()
     }
 
     /// Build project metadata dict (no data values — those go in data/*.json).

@@ -1,0 +1,14 @@
+{
+  "columns": [
+    "Category A",
+    "Category B",
+    "Category C"
+  ],
+  "rows": [
+    [
+      41.7,
+      89.2,
+      61.5
+    ]
+  ]
+}

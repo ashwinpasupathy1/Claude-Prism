@@ -199,11 +199,13 @@ struct ToolbarBanner: View {
                 activeButton(icon: "arrow.uturn.backward", label: "Undo",
                              color: appState.canUndo ? .blue : .gray) {
                     appState.undoManager.undo()
+                    appState.refreshUndoState()
                     DebugLog.shared.logAppEvent("undo()")
                 }
                 activeButton(icon: "arrow.uturn.forward", label: "Redo",
                              color: appState.canRedo ? .blue : .gray) {
                     appState.undoManager.redo()
+                    appState.refreshUndoState()
                     DebugLog.shared.logAppEvent("redo()")
                 }
             }

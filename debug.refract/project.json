@@ -1,0 +1,762 @@
+{
+  "activeExperimentID": "D5695AAB-4F98-488C-8427-923583C8C8D3",
+  "activeItemID": "",
+  "activeItemKind": "",
+  "experiments": [
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "6C54F70A-0B0B-4434-B8BB-3DD038E522F6",
+          "label": "Bar Chart Data",
+          "tableType": "column"
+        }
+      ],
+      "description": "Sample data for Bar Chart (bar)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "bar",
+          "dataTableID": "6C54F70A-0B0B-4434-B8BB-3DD038E522F6",
+          "id": "482C8250-2AFF-4701-9DBF-CF91F678CE3C",
+          "label": "Bar Chart"
+        }
+      ],
+      "id": "D5695AAB-4F98-488C-8427-923583C8C8D3",
+      "info": "",
+      "label": "Bar Chart",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "E7FADDFC-557C-4615-B896-2F445084518C",
+          "label": "Line Graph Data",
+          "tableType": "xy"
+        }
+      ],
+      "description": "Sample data for Line Graph (line)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "line",
+          "dataTableID": "E7FADDFC-557C-4615-B896-2F445084518C",
+          "id": "4185255C-2193-41F5-890E-7634E17E1DDD",
+          "label": "Line Graph"
+        }
+      ],
+      "id": "195D9A9B-BE6B-43E1-B888-1E7992169B84",
+      "info": "",
+      "label": "Line Graph",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "ABD1FBC9-7542-48B9-992D-9C2C67BDFD30",
+          "label": "Grouped Bar Data",
+          "tableType": "grouped"
+        }
+      ],
+      "description": "Sample data for Grouped Bar (grouped_bar)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "grouped_bar",
+          "dataTableID": "ABD1FBC9-7542-48B9-992D-9C2C67BDFD30",
+          "id": "E8476CF9-888A-4D40-B775-24E77120A496",
+          "label": "Grouped Bar"
+        }
+      ],
+      "id": "27651492-0759-4B1C-94ED-D9EA9081CC65",
+      "info": "",
+      "label": "Grouped Bar",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "604B7EC6-89B4-4BB6-9B28-EB2EB7D27ADB",
+          "label": "Box Plot Data",
+          "tableType": "column"
+        }
+      ],
+      "description": "Sample data for Box Plot (box)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "box",
+          "dataTableID": "604B7EC6-89B4-4BB6-9B28-EB2EB7D27ADB",
+          "id": "27B04F95-8A90-4434-AE81-2445D73A6E92",
+          "label": "Box Plot"
+        }
+      ],
+      "id": "FF8A5403-EE04-4F04-AC6F-001772894F3B",
+      "info": "",
+      "label": "Box Plot",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "14FA779B-228A-45F2-80A8-C386C9C19D0E",
+          "label": "Scatter Plot Data",
+          "tableType": "xy"
+        }
+      ],
+      "description": "Sample data for Scatter Plot (scatter)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "scatter",
+          "dataTableID": "14FA779B-228A-45F2-80A8-C386C9C19D0E",
+          "id": "4E23B72E-6D9E-4D68-81FF-322114F13C36",
+          "label": "Scatter Plot"
+        }
+      ],
+      "id": "C6E53E43-41B1-491E-8C49-4865EB79584C",
+      "info": "",
+      "label": "Scatter Plot",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "F5F367A7-73D0-4B65-B20A-FADDAF3677BA",
+          "label": "Violin Plot Data",
+          "tableType": "column"
+        }
+      ],
+      "description": "Sample data for Violin Plot (violin)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "violin",
+          "dataTableID": "F5F367A7-73D0-4B65-B20A-FADDAF3677BA",
+          "id": "DDAC7E2A-71FE-47A2-A0B8-05B12EF167EF",
+          "label": "Violin Plot"
+        }
+      ],
+      "id": "7523D5A5-FA82-42FF-9096-99A407BBE122",
+      "info": "",
+      "label": "Violin Plot",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "8FA7F5E7-1B41-42D6-8801-F0EADADEC028",
+          "label": "Survival Curve Data",
+          "tableType": "survival"
+        }
+      ],
+      "description": "Sample data for Survival Curve (kaplan_meier)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "kaplan_meier",
+          "dataTableID": "8FA7F5E7-1B41-42D6-8801-F0EADADEC028",
+          "id": "3E43D055-3211-4FDD-B7E5-3FD6102AAEC1",
+          "label": "Survival Curve"
+        }
+      ],
+      "id": "597ADFDA-31B4-4B48-8D00-AAA3CAEEA2AA",
+      "info": "",
+      "label": "Survival Curve",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "EA50914D-1F95-41CC-BD26-9B98F49502E6",
+          "label": "Heatmap Data",
+          "tableType": "grouped"
+        }
+      ],
+      "description": "Sample data for Heatmap (heatmap)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "heatmap",
+          "dataTableID": "EA50914D-1F95-41CC-BD26-9B98F49502E6",
+          "id": "572F4286-870F-4C73-910B-75A69BDFF29B",
+          "label": "Heatmap"
+        }
+      ],
+      "id": "009D0D7B-B38E-4D99-914E-4AC3B0D67FF6",
+      "info": "",
+      "label": "Heatmap",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "E13D5A50-252F-4503-84F7-0B5548B81574",
+          "label": "Two-Way ANOVA Data",
+          "tableType": "twoWay"
+        }
+      ],
+      "description": "Sample data for Two-Way ANOVA (two_way_anova)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "two_way_anova",
+          "dataTableID": "E13D5A50-252F-4503-84F7-0B5548B81574",
+          "id": "CD13C3E2-70C1-4C1B-AEFA-A47FEE339913",
+          "label": "Two-Way ANOVA"
+        }
+      ],
+      "id": "3CE53A95-1F24-4EA1-B1AF-F8D3AAD5A00E",
+      "info": "",
+      "label": "Two-Way ANOVA",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "9F71E8B6-EBB6-4BF9-83FE-152ECF2904BC",
+          "label": "Before / After Data",
+          "tableType": "comparison"
+        }
+      ],
+      "description": "Sample data for Before / After (before_after)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "before_after",
+          "dataTableID": "9F71E8B6-EBB6-4BF9-83FE-152ECF2904BC",
+          "id": "7D6F1B37-1321-444E-828C-2588DB755D6E",
+          "label": "Before / After"
+        }
+      ],
+      "id": "38D7C36F-0B42-4733-8CBA-B00069B5BCAE",
+      "info": "",
+      "label": "Before / After",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "A8B73529-318C-44AD-8B05-C6EF9864883F",
+          "label": "Histogram Data",
+          "tableType": "column"
+        }
+      ],
+      "description": "Sample data for Histogram (histogram)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "histogram",
+          "dataTableID": "A8B73529-318C-44AD-8B05-C6EF9864883F",
+          "id": "F6D8672F-256F-4502-9050-33D125A0502E",
+          "label": "Histogram"
+        }
+      ],
+      "id": "EECE8FEC-6540-4E6F-A4F5-4EDB23E2D898",
+      "info": "",
+      "label": "Histogram",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "9E0E1E63-3172-4CAC-B6DA-EC240F90C44A",
+          "label": "Subcolumn Scatter Data",
+          "tableType": "column"
+        }
+      ],
+      "description": "Sample data for Subcolumn Scatter (subcolumn_scatter)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "subcolumn_scatter",
+          "dataTableID": "9E0E1E63-3172-4CAC-B6DA-EC240F90C44A",
+          "id": "56172373-69FA-4E25-9B70-1128BAAA25F4",
+          "label": "Subcolumn Scatter"
+        }
+      ],
+      "id": "149567B0-7B1B-485E-B685-03B815D4F07D",
+      "info": "",
+      "label": "Subcolumn Scatter",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "E11291A8-C0E5-4ACB-BB6C-CDEF35681AB8",
+          "label": "Curve Fit Data",
+          "tableType": "xy"
+        }
+      ],
+      "description": "Sample data for Curve Fit (curve_fit)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "curve_fit",
+          "dataTableID": "E11291A8-C0E5-4ACB-BB6C-CDEF35681AB8",
+          "id": "F36554E8-0F4D-44F6-AF84-519B84125CEC",
+          "label": "Curve Fit"
+        }
+      ],
+      "id": "059E1A0B-FC46-4CF3-A1F8-33BA91159086",
+      "info": "",
+      "label": "Curve Fit",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "46613560-4206-4189-97B3-6FA709739E86",
+          "label": "Column Statistics Data",
+          "tableType": "column"
+        }
+      ],
+      "description": "Sample data for Column Statistics (column_stats)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "column_stats",
+          "dataTableID": "46613560-4206-4189-97B3-6FA709739E86",
+          "id": "BF7DC54B-9968-41C3-AC7C-24945BD5FE9A",
+          "label": "Column Statistics"
+        }
+      ],
+      "id": "43886D15-53BF-42D9-8AE9-30863954DCF8",
+      "info": "",
+      "label": "Column Statistics",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "2830D138-2E75-4A5D-A987-7C29A554EBF0",
+          "label": "Contingency Table Data",
+          "tableType": "contingency"
+        }
+      ],
+      "description": "Sample data for Contingency Table (contingency)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "contingency",
+          "dataTableID": "2830D138-2E75-4A5D-A987-7C29A554EBF0",
+          "id": "0DC5D890-EE24-4A97-AE0B-899A798C030D",
+          "label": "Contingency Table"
+        }
+      ],
+      "id": "B4D66053-9541-43A5-9E03-1A1B2ECCD93A",
+      "info": "",
+      "label": "Contingency Table",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "BEA75028-821A-47BD-B06E-81778541FAFA",
+          "label": "Repeated Measures Data",
+          "tableType": "comparison"
+        }
+      ],
+      "description": "Sample data for Repeated Measures (repeated_measures)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "repeated_measures",
+          "dataTableID": "BEA75028-821A-47BD-B06E-81778541FAFA",
+          "id": "0C8E4097-B664-4EE7-905B-A8778B738C34",
+          "label": "Repeated Measures"
+        }
+      ],
+      "id": "93D035FA-4872-42EF-9FF6-7B30E90FB61F",
+      "info": "",
+      "label": "Repeated Measures",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "1498DDF0-1F2F-495A-8B5A-B64684A6F03A",
+          "label": "Chi-Square GoF Data",
+          "tableType": "column"
+        }
+      ],
+      "description": "Sample data for Chi-Square GoF (chi_square_gof)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "chi_square_gof",
+          "dataTableID": "1498DDF0-1F2F-495A-8B5A-B64684A6F03A",
+          "id": "DC677CE2-A10A-4862-B3B9-C2D4AE9899F4",
+          "label": "Chi-Square GoF"
+        }
+      ],
+      "id": "D47437BE-75A8-414F-9FDE-EC1772A2B052",
+      "info": "",
+      "label": "Chi-Square GoF",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "B6557BEE-8970-417D-9524-5559E7717CBD",
+          "label": "Stacked Bar Data",
+          "tableType": "grouped"
+        }
+      ],
+      "description": "Sample data for Stacked Bar (stacked_bar)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "stacked_bar",
+          "dataTableID": "B6557BEE-8970-417D-9524-5559E7717CBD",
+          "id": "1C8A0D1D-37D4-46D3-887F-197BC8271DBC",
+          "label": "Stacked Bar"
+        }
+      ],
+      "id": "77E5AA79-F7F9-4206-988E-29E6D5F3ACAD",
+      "info": "",
+      "label": "Stacked Bar",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "D8CDBD9C-B4DD-423F-B15D-846909DA5CA1",
+          "label": "Bubble Chart Data",
+          "tableType": "xy"
+        }
+      ],
+      "description": "Sample data for Bubble Chart (bubble)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "bubble",
+          "dataTableID": "D8CDBD9C-B4DD-423F-B15D-846909DA5CA1",
+          "id": "4AE4F6DA-DD0C-418B-BEF8-446D34493469",
+          "label": "Bubble Chart"
+        }
+      ],
+      "id": "BC8E6EF5-9592-419B-8288-30E393651107",
+      "info": "",
+      "label": "Bubble Chart",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "98EDA65E-4198-415C-9EE2-FEBC3A26230D",
+          "label": "Dot Plot Data",
+          "tableType": "column"
+        }
+      ],
+      "description": "Sample data for Dot Plot (dot_plot)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "dot_plot",
+          "dataTableID": "98EDA65E-4198-415C-9EE2-FEBC3A26230D",
+          "id": "AA504A5D-AD5C-4483-B093-A7B390DBC7F0",
+          "label": "Dot Plot"
+        }
+      ],
+      "id": "715846E4-5B68-41E8-842F-F0214F63DE50",
+      "info": "",
+      "label": "Dot Plot",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "4F18B3C1-B4F5-4E59-9B18-870F6C162EFF",
+          "label": "Bland-Altman Data",
+          "tableType": "comparison"
+        }
+      ],
+      "description": "Sample data for Bland-Altman (bland_altman)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "bland_altman",
+          "dataTableID": "4F18B3C1-B4F5-4E59-9B18-870F6C162EFF",
+          "id": "13F1083C-BADF-421A-A793-AA0838BA33C3",
+          "label": "Bland-Altman"
+        }
+      ],
+      "id": "BA7110D3-FE2E-47D0-AAE7-6EEB0307E26E",
+      "info": "",
+      "label": "Bland-Altman",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "0C610A59-5E61-42D3-93E5-DC58B06FEF20",
+          "label": "Forest Plot Data",
+          "tableType": "meta"
+        }
+      ],
+      "description": "Sample data for Forest Plot (forest_plot)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "forest_plot",
+          "dataTableID": "0C610A59-5E61-42D3-93E5-DC58B06FEF20",
+          "id": "26BC0F4A-39E6-41EB-B1F2-AC3D1CB7FD37",
+          "label": "Forest Plot"
+        }
+      ],
+      "id": "0E2DB0D3-96CC-49D2-89B1-1C366451DA31",
+      "info": "",
+      "label": "Forest Plot",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "66B72612-0562-41D4-BC56-F5F9B36FC6A5",
+          "label": "Area Chart Data",
+          "tableType": "xy"
+        }
+      ],
+      "description": "Sample data for Area Chart (area_chart)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "area_chart",
+          "dataTableID": "66B72612-0562-41D4-BC56-F5F9B36FC6A5",
+          "id": "87099D93-9DDE-4FD5-8709-7B3CEBC7073A",
+          "label": "Area Chart"
+        }
+      ],
+      "id": "80780729-041F-40ED-B9A8-8DB85747C918",
+      "info": "",
+      "label": "Area Chart",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "38D835A2-52C0-4141-A872-CE5325968CE9",
+          "label": "Raincloud Data",
+          "tableType": "column"
+        }
+      ],
+      "description": "Sample data for Raincloud (raincloud)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "raincloud",
+          "dataTableID": "38D835A2-52C0-4141-A872-CE5325968CE9",
+          "id": "0A851218-5AB5-4089-AAAA-423EACD391DA",
+          "label": "Raincloud"
+        }
+      ],
+      "id": "D3445380-1AC8-4E49-853C-D6CBDFC7D320",
+      "info": "",
+      "label": "Raincloud",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "56BE39B9-2360-4232-A24D-55629E05836B",
+          "label": "Q-Q Plot Data",
+          "tableType": "column"
+        }
+      ],
+      "description": "Sample data for Q-Q Plot (qq_plot)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "qq_plot",
+          "dataTableID": "56BE39B9-2360-4232-A24D-55629E05836B",
+          "id": "0033D77F-4B2E-46E0-90C6-AEDB24BA1C8D",
+          "label": "Q-Q Plot"
+        }
+      ],
+      "id": "591E5F60-2675-454D-8413-11F55E15627C",
+      "info": "",
+      "label": "Q-Q Plot",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "9E1B4603-8F89-4926-9B84-04CB80E9669E",
+          "label": "Lollipop Data",
+          "tableType": "column"
+        }
+      ],
+      "description": "Sample data for Lollipop (lollipop)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "lollipop",
+          "dataTableID": "9E1B4603-8F89-4926-9B84-04CB80E9669E",
+          "id": "B25E5AFB-4214-4139-B8BC-D2A7E4FA3013",
+          "label": "Lollipop"
+        }
+      ],
+      "id": "DBA7049F-1F65-41C4-9A6F-D42880146459",
+      "info": "",
+      "label": "Lollipop",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "5BD38BB8-A33B-4E9C-B16B-B135FE3E7086",
+          "label": "Waterfall Data",
+          "tableType": "parts"
+        }
+      ],
+      "description": "Sample data for Waterfall (waterfall)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "waterfall",
+          "dataTableID": "5BD38BB8-A33B-4E9C-B16B-B135FE3E7086",
+          "id": "6AF658F0-132B-46E4-98E4-53BF5D6257D3",
+          "label": "Waterfall"
+        }
+      ],
+      "id": "E1385CEB-CC65-4320-9F46-C51A60153C8E",
+      "info": "",
+      "label": "Waterfall",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "129079D3-18E1-4BC7-AAAA-11B9F79A3859",
+          "label": "Pyramid Data",
+          "tableType": "column"
+        }
+      ],
+      "description": "Sample data for Pyramid (pyramid)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "pyramid",
+          "dataTableID": "129079D3-18E1-4BC7-AAAA-11B9F79A3859",
+          "id": "66747CCA-86C1-40D0-8BA1-F5BB28706061",
+          "label": "Pyramid"
+        }
+      ],
+      "id": "39E8CD85-C534-4BB4-9009-E5C469827CDD",
+      "info": "",
+      "label": "Pyramid",
+      "lastModifiedAt": 1774538689.565409
+    },
+    {
+      "analyses": [],
+      "createdAt": 1774538689.565409,
+      "dataTables": [
+        {
+          "hasData": true,
+          "id": "E1F345A8-1F48-44B1-82AD-0799B8126662",
+          "label": "ECDF Data",
+          "tableType": "column"
+        }
+      ],
+      "description": "Sample data for ECDF (ecdf)",
+      "graphs": [
+        {
+          "chartConfig": {},
+          "chartType": "ecdf",
+          "dataTableID": "E1F345A8-1F48-44B1-82AD-0799B8126662",
+          "id": "056B3C0B-3E72-42E2-9F4D-8DCE9DFEF2FD",
+          "label": "ECDF"
+        }
+      ],
+      "id": "D22E38B7-107D-4C1B-A172-C3EA3F856065",
+      "info": "",
+      "label": "ECDF",
+      "lastModifiedAt": 1774538689.565409
+    }
+  ],
+  "format_version": 4
+}

@@ -67,7 +67,7 @@ struct NavigatorView: View {
                 Button {
                     expandedExperiments = Set(appState.experiments.map(\.id))
                 } label: {
-                    Image(systemName: "arrow.up.and.down.text.horizontal")
+                    Image(systemName: "chevron.down.2")
                         .font(.caption)
                 }
                 .buttonStyle(.plain)
@@ -77,7 +77,7 @@ struct NavigatorView: View {
                 Button {
                     expandedExperiments.removeAll()
                 } label: {
-                    Image(systemName: "arrow.up.to.line.compact")
+                    Image(systemName: "chevron.up.2")
                         .font(.caption)
                 }
                 .buttonStyle(.plain)
@@ -634,11 +634,15 @@ struct ReorderDropDelegate: DropDelegate {
     }
 
     func dropExited(info: DropInfo) {
-        dropTargetID = nil
+        // Ensure the indicator is always cleared when the drag leaves
+        if dropTargetID == targetID {
+            dropTargetID = nil
+        }
     }
 
     func performDrop(info: DropInfo) -> Bool {
         let savedEdge = dropEdge
+        // Clear indicator immediately and synchronously
         dropTargetID = nil
         guard let item = info.itemProviders(for: [.text]).first else { return false }
         item.loadItem(forTypeIdentifier: "public.text", options: nil) { data, _ in
@@ -646,8 +650,7 @@ struct ReorderDropDelegate: DropDelegate {
                   let str = String(data: data, encoding: .utf8),
                   let droppedID = UUID(uuidString: str) else { return }
             DispatchQueue.main.async {
-                self.dropTargetID = nil
-                onDrop(droppedID, savedEdge)
+                self.onDrop(droppedID, savedEdge)
             }
         }
         return true

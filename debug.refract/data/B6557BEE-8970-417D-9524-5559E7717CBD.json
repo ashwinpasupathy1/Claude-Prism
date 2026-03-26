@@ -1,0 +1,28 @@
+{
+  "columns": [
+    "Region",
+    "Product A",
+    "Product B",
+    "Product C"
+  ],
+  "rows": [
+    [
+      "North",
+      21.3,
+      33.8,
+      9.0
+    ],
+    [
+      "South",
+      27.8,
+      31.6,
+      9.9
+    ],
+    [
+      "East",
+      30.9,
+      21.0,
+      18.7
+    ]
+  ]
+}

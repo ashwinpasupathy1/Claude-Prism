@@ -1,0 +1,40 @@
+{
+  "columns": [
+    "Category",
+    "Value"
+  ],
+  "rows": [
+    [
+      "Starting Balance",
+      100
+    ],
+    [
+      "Sales Revenue",
+      45
+    ],
+    [
+      "Service Income",
+      20
+    ],
+    [
+      "COGS",
+      -30
+    ],
+    [
+      "Salaries",
+      -25
+    ],
+    [
+      "Marketing",
+      -10
+    ],
+    [
+      "Rent",
+      -8
+    ],
+    [
+      "Net Profit",
+      null
+    ]
+  ]
+}
