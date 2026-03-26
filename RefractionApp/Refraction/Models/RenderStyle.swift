@@ -125,12 +125,12 @@ enum RenderStyle: String, CaseIterable, Identifiable, Codable {
         axes.xAxisTickLength = 5
         axes.yAxisTickLength = 5
         axes.xAxisLabelRotation = 0
-        axes.globalFontName = "Helvetica"
-        axes.chartTitleFontSize = 14
+        axes.globalFontName = "Arial Bold"
+        axes.chartTitleFontSize = 12
         axes.xAxisTitleFontSize = 12
         axes.yAxisTitleFontSize = 12
-        axes.xAxisLabelFontSize = 10
-        axes.yAxisLabelFontSize = 10
+        axes.xAxisLabelFontSize = 12
+        axes.yAxisLabelFontSize = 12
     }
 
     // MARK: - Prism
@@ -185,10 +185,10 @@ enum RenderStyle: String, CaseIterable, Identifiable, Codable {
         axes.xAxisTickLength = 6
         axes.yAxisTickLength = 6
         axes.xAxisLabelRotation = 0
-        axes.globalFontName = "Helvetica"
-        axes.chartTitleFontSize = 16
-        axes.xAxisTitleFontSize = 14
-        axes.yAxisTitleFontSize = 14
+        axes.globalFontName = "Arial Bold"
+        axes.chartTitleFontSize = 12
+        axes.xAxisTitleFontSize = 12
+        axes.yAxisTitleFontSize = 12
         axes.xAxisLabelFontSize = 12
         axes.yAxisLabelFontSize = 12
     }
@@ -246,12 +246,12 @@ enum RenderStyle: String, CaseIterable, Identifiable, Codable {
         axes.xAxisTickLength = 0
         axes.yAxisTickLength = 0
         axes.xAxisLabelRotation = 0
-        axes.globalFontName = "Helvetica"
-        axes.chartTitleFontSize = 13
-        axes.xAxisTitleFontSize = 11
-        axes.yAxisTitleFontSize = 11
-        axes.xAxisLabelFontSize = 9
-        axes.yAxisLabelFontSize = 9
+        axes.globalFontName = "Arial Bold"
+        axes.chartTitleFontSize = 12
+        axes.xAxisTitleFontSize = 12
+        axes.yAxisTitleFontSize = 12
+        axes.xAxisLabelFontSize = 12
+        axes.yAxisLabelFontSize = 12
     }
 
     // MARK: - Matplotlib
@@ -307,11 +307,11 @@ enum RenderStyle: String, CaseIterable, Identifiable, Codable {
         axes.xAxisTickLength = 4
         axes.yAxisTickLength = 4
         axes.xAxisLabelRotation = 0
-        axes.globalFontName = "Helvetica" // DejaVu Sans not on macOS, Helvetica is close
-        axes.chartTitleFontSize = 14
+        axes.globalFontName = "Arial Bold" // DejaVu Sans not on macOS, Helvetica is close
+        axes.chartTitleFontSize = 12
         axes.xAxisTitleFontSize = 12
         axes.yAxisTitleFontSize = 12
-        axes.xAxisLabelFontSize = 10
-        axes.yAxisLabelFontSize = 10
+        axes.xAxisLabelFontSize = 12
+        axes.yAxisLabelFontSize = 12
     }
 }
