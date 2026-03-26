@@ -16,7 +16,10 @@ struct NavigatorView: View {
     @State private var newDataTableExperimentID: UUID?
     @State private var searchText: String = ""
     @State private var expandedExperiments: Set<UUID> = []
-    @FocusState private var searchFocused: Bool
+    @State private var dropTargetID: UUID?
+    @State private var dropEdge: DropEdge = .bottom
+
+    enum DropEdge { case top, bottom }
 
     /// Whether an item matches the current search query.
     private func matches(_ text: String) -> Bool {
@@ -58,9 +61,31 @@ struct NavigatorView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            newExperimentButton
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+            HStack {
+                newExperimentButton
+                Spacer()
+                Button {
+                    expandedExperiments = Set(appState.experiments.map(\.id))
+                } label: {
+                    Image(systemName: "arrow.up.and.down.text.horizontal")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Expand All")
+
+                Button {
+                    expandedExperiments.removeAll()
+                } label: {
+                    Image(systemName: "arrow.up.to.line.compact")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Collapse All")
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
 
             // Search bar
             HStack(spacing: 4) {
@@ -70,12 +95,9 @@ struct NavigatorView: View {
                 TextField("Search...", text: $searchText)
                     .textFieldStyle(.plain)
                     .font(.caption)
-                    .focused($searchFocused)
-                    .onAppear { searchFocused = false }
                 if !searchText.isEmpty {
                     Button {
                         searchText = ""
-                        searchFocused = false
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(.tertiary)
@@ -98,12 +120,16 @@ struct NavigatorView: View {
         }
         .listStyle(.sidebar)
         .onAppear {
-            // Auto-expand all experiments on launch
-            expandedExperiments = Set(appState.experiments.map(\.id))
+            // Only expand the first experiment on launch
+            if let first = appState.experiments.first {
+                expandedExperiments = [first.id]
+            }
         }
-        .onChange(of: appState.experiments.count) { _, _ in
-            // Auto-expand newly added experiments
-            expandedExperiments = Set(appState.experiments.map(\.id))
+        .onChange(of: appState.experiments.count) { oldCount, newCount in
+            // Auto-expand only newly added experiments
+            if newCount > oldCount, let last = appState.experiments.last {
+                expandedExperiments.insert(last.id)
+            }
         }
         .alert(
             "Delete Experiment?",
@@ -238,8 +264,33 @@ struct NavigatorView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .draggable(experiment.id.uuidString)
+        .overlay(alignment: dropEdge == .top ? .top : .bottom) {
+            if dropTargetID == experiment.id {
+                Rectangle()
+                    .fill(Color.accentColor)
+                    .frame(height: 2)
+            }
+        }
+        .onDrop(of: [.text], delegate: ReorderDropDelegate(
+            targetID: experiment.id,
+            dropTargetID: $dropTargetID,
+            dropEdge: $dropEdge,
+            onDrop: { droppedID, edge in
+                guard droppedID != experiment.id,
+                      let fromIndex = appState.experiments.firstIndex(where: { $0.id == droppedID }),
+                      let toIndex = appState.experiments.firstIndex(where: { $0.id == experiment.id }) else { return }
+                let dest = edge == .bottom ? toIndex + 1 : toIndex
+                if dest != fromIndex && dest != fromIndex + 1 {
+                    appState.moveExperiment(from: IndexSet(integer: fromIndex), to: dest > fromIndex ? dest : dest)
+                }
+            }
+        ))
 
         if isExpanded {
+            // Info row
+            infoRow(experiment)
+
             // Data Tables
             if !f.dataTables.isEmpty || searchText.isEmpty {
                 sectionLabel("Data Tables")
@@ -249,6 +300,24 @@ struct NavigatorView: View {
                     } content: {
                         dataTableRow(table, experiment: experiment)
                     }
+                    .draggable(table.id.uuidString)
+                    .overlay(alignment: dropEdge == .top ? .top : .bottom) {
+                        if dropTargetID == table.id {
+                            Rectangle().fill(Color.accentColor).frame(height: 2)
+                        }
+                    }
+                    .onDrop(of: [.text], delegate: ReorderDropDelegate(
+                        targetID: table.id, dropTargetID: $dropTargetID, dropEdge: $dropEdge,
+                        onDrop: { droppedID, edge in
+                            guard droppedID != table.id,
+                                  let fromIndex = experiment.dataTables.firstIndex(where: { $0.id == droppedID }),
+                                  let toIndex = experiment.dataTables.firstIndex(where: { $0.id == table.id }) else { return }
+                            let dest = edge == .bottom ? toIndex + 1 : toIndex
+                            if dest != fromIndex && dest != fromIndex + 1 {
+                                appState.moveDataTable(from: IndexSet(integer: fromIndex), to: dest, in: experiment.id)
+                            }
+                        }
+                    ))
                 }
                 if searchText.isEmpty {
                     Button {
@@ -274,6 +343,24 @@ struct NavigatorView: View {
                     } content: {
                         graphRow(graph, experiment: experiment)
                     }
+                    .draggable(graph.id.uuidString)
+                    .overlay(alignment: dropEdge == .top ? .top : .bottom) {
+                        if dropTargetID == graph.id {
+                            Rectangle().fill(Color.accentColor).frame(height: 2)
+                        }
+                    }
+                    .onDrop(of: [.text], delegate: ReorderDropDelegate(
+                        targetID: graph.id, dropTargetID: $dropTargetID, dropEdge: $dropEdge,
+                        onDrop: { droppedID, edge in
+                            guard droppedID != graph.id,
+                                  let fromIndex = experiment.graphs.firstIndex(where: { $0.id == droppedID }),
+                                  let toIndex = experiment.graphs.firstIndex(where: { $0.id == graph.id }) else { return }
+                            let dest = edge == .bottom ? toIndex + 1 : toIndex
+                            if dest != fromIndex && dest != fromIndex + 1 {
+                                appState.moveGraph(from: IndexSet(integer: fromIndex), to: dest, in: experiment.id)
+                            }
+                        }
+                    ))
                 }
                 if searchText.isEmpty {
                     Button {
@@ -300,6 +387,24 @@ struct NavigatorView: View {
                     } content: {
                         analysisRow(analysis, experiment: experiment)
                     }
+                    .draggable(analysis.id.uuidString)
+                    .overlay(alignment: dropEdge == .top ? .top : .bottom) {
+                        if dropTargetID == analysis.id {
+                            Rectangle().fill(Color.accentColor).frame(height: 2)
+                        }
+                    }
+                    .onDrop(of: [.text], delegate: ReorderDropDelegate(
+                        targetID: analysis.id, dropTargetID: $dropTargetID, dropEdge: $dropEdge,
+                        onDrop: { droppedID, edge in
+                            guard droppedID != analysis.id,
+                                  let fromIndex = experiment.analyses.firstIndex(where: { $0.id == droppedID }),
+                                  let toIndex = experiment.analyses.firstIndex(where: { $0.id == analysis.id }) else { return }
+                            let dest = edge == .bottom ? toIndex + 1 : toIndex
+                            if dest != fromIndex && dest != fromIndex + 1 {
+                                appState.moveAnalysis(from: IndexSet(integer: fromIndex), to: dest, in: experiment.id)
+                            }
+                        }
+                    ))
                 }
                 if searchText.isEmpty {
                     Button {
@@ -376,6 +481,45 @@ struct NavigatorView: View {
             Button("Rename") { editingID = experiment.id }
             Button("Delete", role: .destructive) { experimentToDelete = experiment }
         }
+    }
+
+    // MARK: - Info Row
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
+
+    private func infoRow(_ experiment: Experiment) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if !experiment.description.isEmpty {
+                Text(experiment.description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+            HStack(spacing: 4) {
+                Image(systemName: "clock")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.tertiary)
+                Text("Created \(Self.dateFormatter.string(from: experiment.createdAt))")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.tertiary)
+            }
+            HStack(spacing: 4) {
+                Image(systemName: "pencil")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.tertiary)
+                Text("Modified \(Self.dateFormatter.string(from: experiment.lastModifiedAt))")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.leading, 16)
+        .padding(.vertical, 4)
     }
 
     // MARK: - Row Views
@@ -463,5 +607,53 @@ struct NavigatorView: View {
                 appState.removeAnalysis(id: analysis.id)
             }
         }
+    }
+}
+
+// MARK: - Reorder Drop Delegate
+
+/// Drop delegate that tracks cursor position within a row to show a
+/// top or bottom insertion indicator, then calls back with the resolved edge.
+struct ReorderDropDelegate: DropDelegate {
+    let targetID: UUID
+    @Binding var dropTargetID: UUID?
+    @Binding var dropEdge: NavigatorView.DropEdge
+    let onDrop: (UUID, NavigatorView.DropEdge) -> Void
+
+    func dropEntered(info: DropInfo) {
+        dropTargetID = targetID
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        dropTargetID = targetID
+        // Use the local Y position within the row to decide above/below
+        // DropInfo doesn't give us the view frame directly, but we can
+        // use a heuristic: if Y < ~12pt, it's "top", otherwise "bottom"
+        dropEdge = info.location.y < 12 ? .top : .bottom
+        return DropProposal(operation: .move)
+    }
+
+    func dropExited(info: DropInfo) {
+        dropTargetID = nil
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        let savedEdge = dropEdge
+        dropTargetID = nil
+        guard let item = info.itemProviders(for: [.text]).first else { return false }
+        item.loadItem(forTypeIdentifier: "public.text", options: nil) { data, _ in
+            guard let data = data as? Data,
+                  let str = String(data: data, encoding: .utf8),
+                  let droppedID = UUID(uuidString: str) else { return }
+            DispatchQueue.main.async {
+                self.dropTargetID = nil
+                onDrop(droppedID, savedEdge)
+            }
+        }
+        return true
+    }
+
+    func validateDrop(info: DropInfo) -> Bool {
+        true
     }
 }

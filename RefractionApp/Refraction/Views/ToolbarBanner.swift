@@ -20,6 +20,9 @@ struct ToolbarBanner: View {
     @State private var showArchitectureGuide = false
     @State private var showFormatGraph = false
     @State private var showFormatAxes = false
+    @State private var showDataSettings = false
+    @State private var showStatsSettings = false
+    @State private var showStyleSettings = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -86,6 +89,18 @@ struct ToolbarBanner: View {
                 FormatAxesDialog(settings: graph.formatAxesSettings)
             }
         }
+        .sheet(isPresented: $showDataSettings) {
+            DataSettingsDialog()
+                .environment(appState)
+        }
+        .sheet(isPresented: $showStatsSettings) {
+            StatsSettingsDialog()
+                .environment(appState)
+        }
+        .sheet(isPresented: $showStyleSettings) {
+            StyleSettingsDialog()
+                .environment(appState)
+        }
         .alert("Delete Selected Item?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 deleteSelectedItem()
@@ -102,7 +117,7 @@ struct ToolbarBanner: View {
         VStack(spacing: 1) {
             HStack(spacing: 6) {
                 activeButton(icon: "doc.badge.plus", label: "New", color: .blue) {
-                    appState.newProject()
+                    appState.requestNewProject()
                 }
                 Menu {
                     Button("Open File...") {
@@ -237,6 +252,10 @@ struct ToolbarBanner: View {
 
         return VStack(spacing: 1) {
             HStack(spacing: 6) {
+                activeButton(icon: "doc.fill", label: "Data", color: hasGraph ? .teal : .gray) {
+                    guard appState.activeGraph != nil else { return }
+                    showDataSettings = true
+                }
                 activeButton(icon: "paintbrush", label: "Format", color: hasGraph ? .orange : .gray) {
                     guard appState.activeGraph != nil else { return }
                     showFormatGraph = true
@@ -246,14 +265,12 @@ struct ToolbarBanner: View {
                     showFormatAxes = true
                 }
                 activeButton(icon: "paintpalette", label: "Style", color: hasGraph ? .yellow : .gray) {
-                    // Cycle render style on click
-                    guard let graph = appState.activeGraph else { return }
-                    let styles = RenderStyle.allCases
-                    if let idx = styles.firstIndex(of: graph.renderStyle) {
-                        let next = styles[(idx + 1) % styles.count]
-                        graph.applyRenderStyle(next)
-                        DebugLog.shared.logAppEvent("cycleRenderStyle(\(next.rawValue))")
-                    }
+                    guard appState.activeGraph != nil else { return }
+                    showStyleSettings = true
+                }
+                activeButton(icon: "function", label: "Stats", color: hasGraph ? .purple : .gray) {
+                    guard appState.activeGraph != nil else { return }
+                    showStatsSettings = true
                 }
             }
             groupLabel("Format")

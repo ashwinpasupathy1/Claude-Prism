@@ -18,6 +18,12 @@ struct RefractionApp: App {
                 .onAppear {
                     pythonServer.start()
                     appState.loadProjectIfExists()
+                    // Maximize the window on launch
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        if let window = NSApplication.shared.mainWindow {
+                            window.zoom(nil)
+                        }
+                    }
                 }
                 .onDisappear {
                     appState.saveProject()
@@ -48,7 +54,7 @@ struct RefractionApp: App {
             // File menu: New, Open, Save, Save As
             CommandGroup(replacing: .newItem) {
                 Button("New Project") {
-                    appState.newProject()
+                    appState.requestNewProject()
                 }
                 .keyboardShortcut("n", modifiers: .command)
 

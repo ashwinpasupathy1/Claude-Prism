@@ -12,8 +12,6 @@ struct GraphSheetView: View {
 
     @State private var showFormatDialog = false
     @State private var showFormatAxesDialog = false
-    @State private var showConfigPanel = true
-    @State private var configPanelWidth: CGFloat = 260
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,45 +19,16 @@ struct GraphSheetView: View {
             graphToolbar
             Divider()
 
-            // Main content: chart canvas + optional config panel
-            HStack(spacing: 0) {
-                // Chart canvas + zoom strip
-                VStack(spacing: 0) {
-                    chartArea
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    Divider()
-                    zoomControlStrip
-                }
-
-                if showConfigPanel {
-                    // Draggable divider
-                    Rectangle()
-                        .fill(Color(nsColor: .separatorColor))
-                        .frame(width: 1)
-                        .onHover { hovering in
-                            if hovering {
-                                NSCursor.resizeLeftRight.push()
-                            } else {
-                                NSCursor.pop()
-                            }
-                        }
-                        .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    let newWidth = configPanelWidth - value.translation.width
-                                    configPanelWidth = min(max(newWidth, 200), 400)
-                                }
-                        )
-
-                    // Config panel
-                    ConfigTabView()
-                        .frame(width: configPanelWidth)
-                        .background(Color(nsColor: .controlBackgroundColor))
-                }
+            // Main content: chart canvas + zoom strip
+            VStack(spacing: 0) {
+                chartArea
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Divider()
+                zoomControlStrip
             }
         }
         // Auto-generate only when this graph has no spec and data is available.
-        .task(id: "\(graph.id)_\(appState.activeGraphDataTable?.dataFilePath ?? "")") {
+        .task(id: "\(graph.id)_\(appState.activeGraphDataTable?.columns.count ?? 0)_\(appState.activeGraphDataTable?.rows.count ?? 0)") {
             guard graph.chartSpec == nil,
                   appState.activeGraphDataTable?.hasData == true else { return }
             await appState.generatePlot()
@@ -96,18 +65,10 @@ struct GraphSheetView: View {
                 let zoom = graph.zoomLevel
                 let scaledWidth = geo.size.width * zoom
                 let scaledHeight = geo.size.height * zoom
-                let needsScroll = zoom > 1.0
 
-                Group {
-                    if needsScroll {
-                        ScrollView([.horizontal, .vertical]) {
-                            chartCanvas(spec: spec)
-                                .frame(width: scaledWidth, height: scaledHeight)
-                        }
-                    } else {
-                        chartCanvas(spec: spec)
-                            .frame(width: geo.size.width, height: geo.size.height)
-                    }
+                ScrollView([.horizontal, .vertical]) {
+                    chartCanvas(spec: spec)
+                        .frame(width: scaledWidth, height: scaledHeight)
                 }
             }
         } else if appState.activeGraphDataTable?.hasData == true {
@@ -195,17 +156,6 @@ struct GraphSheetView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) {
-                    showConfigPanel.toggle()
-                }
-            } label: {
-                Image(systemName: showConfigPanel ? "sidebar.trailing" : "sidebar.right")
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.small)
-            .help(showConfigPanel ? "Hide Config Panel" : "Show Config Panel")
 
             Button {
                 showFormatDialog = true
