@@ -11,18 +11,20 @@
 
 ## Overview
 
-Refraction brings the familiar workflow of GraphPad Prism to macOS as a native SwiftUI application backed by a Python analysis engine.  The UI follows Prism conventions: a project navigator with multiple sheet types (Data Tables, Graphs, Results, Info), Format Graph/Axes dialogs, and a statistical test encyclopedia.  Load your data from an Excel spreadsheet, choose a chart type, and get publication-quality figures with full statistical analysis -- all without writing a single line of code.
+Refraction brings the familiar workflow of GraphPad Prism to macOS as a native SwiftUI application backed by a Python analysis engine.  Projects are organized into Experiments, each containing Data Tables, Graphs, and Analyses.  Format Graph/Axes dialogs with live preview, render style presets, and a statistical test encyclopedia with LaTeX formulas provide a complete scientific plotting workflow.  Load your data from an Excel spreadsheet, choose a chart type, and get publication-quality figures with full statistical analysis -- all without writing a single line of code.
 
 **Architecture:**
 
 ```
-SwiftUI app (RefractionApp/)  <-->  FastAPI server  <-->  Dedicated analyzers
-      Prism-style UI                  /analyze            refraction/analysis/*.py
-      Native macOS rendering          /upload             refraction/core/stats.py
-                                      /health
+SwiftUI app (Experiment → DataTables + Graphs + Analyses)
+      |
+      v  HTTP (localhost:7331)
+      |
+FastAPI server  →  Dedicated analyzers  →  Pure stats
+  /render, /analyze      analysis/*.py        core/stats.py
 ```
 
-The Python backend is a pure analysis engine with no rendering dependencies.  15+ chart types have dedicated analyzers; statistical computation lives in `refraction/core/stats.py`.  The SwiftUI frontend handles all chart rendering via Apple's Charts framework.
+The Python backend is a pure analysis engine with no rendering dependencies.  15+ chart types have dedicated analyzers; statistical computation lives in `refraction/core/stats.py`.  The SwiftUI frontend renders charts natively via Core Graphics.
 
 ---
 
@@ -46,12 +48,20 @@ open RefractionApp/ in Xcode
 
 ## Features
 
-- **29 chart types** -- from bar charts to Kaplan-Meier survival curves and forest plots
-- **Native macOS app** -- SwiftUI with Prism-style UI (navigator, sheets, Format dialogs)
-- **Statistical engine** -- parametric, nonparametric, paired, and permutation tests
-- **Publication-ready** -- journal export presets for Nature, Science, and Cell
-- **Excel-native data model** -- validates your spreadsheet layout before analysis
-- **FastAPI backend** -- `/analyze` endpoint returns renderer-independent results
+- **29 chart types** -- from bar charts to Kaplan-Meier survival curves and forest plots, each with a dedicated analyzer
+- **Experiment-based project organization** -- Experiments contain Data Tables, Graphs, and Analyses (Prism-style hierarchy)
+- **Native macOS app** -- SwiftUI with Core Graphics rendering, no web views or third-party charting
+- **Format Graph/Axes dialogs** -- Prism-style formatting with live preview
+- **Render style presets** -- Default, Prism, ggplot2, Matplotlib looks with one click
+- **Statistical engine** -- parametric, nonparametric, paired, and permutation tests with posthoc methods
+- **Stats Wiki** -- encyclopedia of statistical tests with LaTeX formulas
+- **Publication-ready** -- journal export presets (Nature/Science/Cell) with DPI/format/size options
+- **Debug console** -- API trace and engine log viewer for development
+- **Architecture reference guide** -- built-in codebase documentation
+- **Zoom controls** -- 0.25x to 4.0x chart zoom
+- **`.refract` project files** -- portable project archives with embedded data
+- **Excel-native data model** -- validates spreadsheet layout before analysis
+- **FastAPI backend** -- `/analyze` and `/render` endpoints return renderer-independent results
 - **Sample datasets** -- included for quick exploration
 
 ---
@@ -101,12 +111,23 @@ The FastAPI server exposes these endpoints:
 |---|---|---|
 | `/health` | GET | Liveness check |
 | `/chart-types` | GET | List all 29 supported chart types |
-| `/analyze` | POST | Run analysis on uploaded data |
+| `/analyze` | POST | Run analysis on uploaded data (flat dict) |
+| `/render` | POST | Bridge for SwiftUI (nested ChartSpec JSON) |
 | `/upload` | POST | Accept .xlsx/.xls/.csv file |
+| `/sheet-list` | POST | List sheet names in an Excel file |
+| `/validate-table` | POST | Validate spreadsheet layout |
+| `/render-latex` | POST | Render LaTeX formula to PNG |
 | `/data-preview` | POST | Preview spreadsheet contents |
 | `/recommend-test` | POST | Suggest appropriate statistical test |
 | `/analyze-stats` | POST | Run stats-only analysis |
+| `/analyze-layout` | POST | Detect data layout, recommend chart types |
+| `/curve-models` | GET | List curve fitting models |
+| `/curve-fit` | POST | Fit a model to X/Y data |
+| `/transforms` | GET | List available column transforms |
+| `/transform` | POST | Apply a transform to a column |
 | `/project/save-refract` | POST | Save .refract project archive |
+| `/project/save` | POST | Save project (legacy) |
+| `/project/load` | POST | Load .refract project archive |
 
 ### POST /analyze
 
@@ -131,12 +152,13 @@ plus pairwise statistical comparisons with p-values and significance stars.
 
 ```
 refraction/
-  analysis/         Analysis engine (analyze function)
+  analysis/         Analysis engine (dedicated analyzers per chart type)
   core/             Stats, validators, registry, types, config
-  io/               Export presets, .pzfx import, .cplot projects
-  server/           FastAPI server with /analyze endpoint
+  io/               Export presets, .pzfx import, .refract projects
+  server/           FastAPI server (/analyze, /render, /upload, etc.)
 
-RefractionApp/      SwiftUI macOS application
+RefractionApp/      SwiftUI macOS application (Experiment → DataTables + Graphs + Analyses)
+RefractionRenderer/ Swift Package for Core Graphics chart rendering
 tests/              Python test suites (767 tests)
 run_all.py          Unified test runner
 ```

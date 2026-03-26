@@ -18,11 +18,10 @@ Never commit if tests fail.  Never skip it.
 ## Architecture Principles
 
 1. **No generic analysis path (goal).** Every chart type SHOULD have a dedicated
-   analyzer that understands its data layout. Currently 15 chart types have
-   dedicated analyzers registered in `_DEDICATED_ANALYZERS`; the remaining 14
-   (bar, box, violin, histogram, etc.) still use the generic column-as-groups
-   fallback in `engine.py`. This is tracked as tech debt -- new chart types
-   must always get a dedicated analyzer.
+   analyzer that understands its data layout. Currently 15+ chart types have
+   dedicated analyzers registered in `_DEDICATED_ANALYZERS`; the remaining types
+   still use the generic column-as-groups fallback in `engine.py`. New chart
+   types must always get a dedicated analyzer.
 
 2. **Renderer knows nothing about statistics.** The SwiftUI renderer reads
    the JSON spec and draws what it sees. It has no knowledge of p-values,
@@ -33,10 +32,25 @@ Never commit if tests fail.  Never skip it.
    styles, or rendering. Visual formatting lives in `FormatGraphSettings`
    and `FormatAxesSettings` on the Swift side.
 
-4. **Data table types match Prism.** The eight table types (XY, Column,
+4. **Engine computes defaults, client can override.** The engine returns
+   computed axis ranges, ticks, box stats, KDE curves, histogram bins, etc.
+   The client accepts these defaults but can override via Format dialogs.
+   `FormatSettingsMerger` merges user overrides into the engine-provided
+   `ChartSpec` without re-running analysis.
+
+5. **Render styles are client-side presets.** `RenderStyle` (Default, Prism,
+   ggplot2, Matplotlib) applies visual settings to `FormatGraphSettings` and
+   `FormatAxesSettings` in place. No engine calls involved.
+
+6. **Data table types match Prism.** The eight table types (XY, Column,
    Grouped, Contingency, Survival, Parts of whole, Multiple variables,
    Nested) follow GraphPad Prism's conventions exactly. Each constrains
    which chart types are valid.
+
+7. **Experiment-based project hierarchy.** The top-level container is an
+   `Experiment`, which owns multiple `DataTable`s, `Graph`s, and `Analysis`
+   objects. Each Graph/Analysis links to one DataTable by ID. The old flat
+   `Sheet` model has been removed.
 
 See `HUMAN_REVIEW_TODO.md` for manual verification tasks.
 
@@ -124,7 +138,8 @@ refraction/io/import_pzfx.py          GraphPad .pzfx file importer
 refraction/io/project.py              .cplot project files (ZIP)
 
 # -- Server --------------------------------------------------------
-refraction/server/api.py              FastAPI: /analyze, /render, /upload, /health, /chart-types,
+refraction/server/api.py              FastAPI: /health, /chart-types, /analyze, /render,
+                                        /upload, /sheet-list, /validate-table, /render-latex,
                                         /data-preview, /recommend-test, /analyze-stats,
                                         /analyze-layout, /curve-models, /curve-fit,
                                         /transforms, /transform, /project/save-refract,
@@ -133,26 +148,35 @@ refraction/server/api.py              FastAPI: /analyze, /render, /upload, /heal
 # -- SwiftUI app ---------------------------------------------------
 RefractionApp/Refraction/App/
   RefractionApp.swift                 @main entry point, server lifecycle
-  AppState.swift                      Central @Observable state
+  AppState.swift                      Central @Observable state (experiments, selection, file ops)
 
 RefractionApp/Refraction/Models/
-  DataTable.swift                     Prism-style data table model
-  Sheet.swift                         Sheet (graph + data + results) model
+  Experiment.swift                    Top-level container: owns DataTables + Graphs + Analyses
+  DataTable.swift                     Data table within an experiment (type + file path)
+  Graph.swift                         Graph within an experiment (chart type, config, spec, format)
+  Analysis.swift                      Statistical analysis within an experiment (results, notes)
+  RenderStyle.swift                   Render style presets (Default, Prism, ggplot2, Matplotlib)
   TableType.swift                     Data table type enum (XY, Column, Grouped, etc.)
   FormatGraphSettings.swift           Graph formatting settings
   FormatAxesSettings.swift            Axes formatting settings
-  ProjectState.swift                  Multi-sheet project state
+  ProjectState.swift                  Project state for save/load
   StatsTestCatalog.swift              Statistical test catalog/wiki
+  ArchitectureGuideCatalog.swift      Architecture reference guide content
   ChartType.swift                     Chart type enum + capabilities
   ChartConfig.swift                   ~40 config properties + toDict()
 
 RefractionApp/Refraction/Views/
   ContentView.swift                   Root layout
-  WelcomeView.swift                   First-run experience
   ErrorView.swift                     Error display + parsing
   ToolbarBanner.swift                 Toolbar status banner
-  Sidebar/NavigatorView.swift         Prism-style project navigator
+  DebugConsoleView.swift              Debug console with API trace log
+  ExportChartDialog.swift             Export dialog (DPI, format, size options)
+  LaTeXView.swift                     LaTeX formula renderer for Stats Wiki
+  Sidebar/NavigatorView.swift         Prism-style experiment/item navigator
   Sidebar/ChartSidebarView.swift      Chart type list
+  Sidebar/NewExperimentDialog.swift   New experiment creation dialog
+  Sidebar/NewDataTableDialog.swift    New data table creation dialog
+  Sidebar/NewGraphDialog.swift        New graph creation dialog
   Sheets/GraphSheetView.swift         Graph sheet container
   Sheets/DataTableView.swift          Data table editor
   Sheets/ResultsSheetView.swift       Statistical results sheet
@@ -160,9 +184,12 @@ RefractionApp/Refraction/Views/
   Sheets/AnalyzeDataDialog.swift      Analyze data dialog
   Sheets/StatsWikiDialog.swift        Stats test encyclopedia dialog
   Sheets/StatsTestDetailDialog.swift  Individual test detail dialog
-  Chart/ChartCanvasView.swift         Canvas rendering
+  Sheets/ArchitectureGuideDialog.swift Architecture reference dialog
+  Chart/ChartCanvasView.swift         Canvas rendering (Core Graphics)
+  Chart/ChartOverlayView.swift        Interactive overlay (hit regions, zoom)
   Chart/FormatGraphDialog.swift       Format Graph dialog (Prism-style)
   Chart/FormatAxesDialog.swift        Format Axes dialog (Prism-style)
+  Chart/FormatSettingsMerger.swift    Merges format overrides into ChartSpec
   Config/ConfigTabView.swift          Tab container
   Config/DataTabView.swift            File + labels
   Config/AxesTabView.swift            Axis config
@@ -173,6 +200,27 @@ RefractionApp/Refraction/Views/
 RefractionApp/Refraction/Services/
   APIClient.swift                     HTTP client (actor, singleton)
   PythonServer.swift                  Python subprocess manager
+  DebugLog.swift                      Centralized debug logger (API calls, engine traces)
+
+# -- Renderer (Swift Package) --------------------------------------
+RefractionRenderer/Sources/RefractionRenderer/
+  ChartSpec.swift                     ChartSpec/GroupSpec/StyleSpec/AxisSpec structs
+  AxisRenderer.swift                  Axes, ticks, labels, grid lines
+  BarRenderer.swift                   Bar charts + error bars
+  BoxRenderer.swift                   Box plots (whiskers, median, quartiles)
+  ViolinRenderer.swift                Violin plots (KDE)
+  ScatterRenderer.swift               Scatter plots
+  LineRenderer.swift                   Line graphs
+  HistogramRenderer.swift             Histograms
+  GroupedBarRenderer.swift            Grouped bar charts
+  StackedBarRenderer.swift            Stacked bar charts
+  DotPlotRenderer.swift               Dot plots
+  BeforeAfterRenderer.swift           Before/after paired charts
+  KaplanMeierRenderer.swift           Survival curves
+  BracketRenderer.swift               Significance brackets
+  HitRegion.swift                     Interactive hit testing for chart elements
+  RenderHelpers.swift                 Shared drawing utilities
+  RenderTheme.swift                   Renderer theme definitions
 
 # -- Sample data ---------------------------------------------------
 RefractionApp/Refraction/Resources/SampleData/
@@ -213,11 +261,16 @@ tests/integration/                    API + pipeline integration tests
 ## Architecture
 
 ```
-SwiftUI app (RefractionApp/)
+SwiftUI app (Experiment → DataTables + Graphs + Analyses)
+    |  AppState manages experiments, selection, file operations
+    |  FormatSettingsMerger applies format overrides to ChartSpec
+    |  RenderStyle presets (Default/Prism/ggplot2/Matplotlib)
     |
     v  HTTP (localhost:7331)
     |
 FastAPI server (refraction/server/api.py)
+    |  /render  — bridge endpoint: analyze → ChartSpec JSON
+    |  /analyze — raw analysis (flat dict)
     |
     v
 Dedicated analyzers (refraction/analysis/*.py)
@@ -232,43 +285,43 @@ Pure stats (refraction/core/stats.py)
 
 The Python backend is a pure analysis engine.  It reads Excel data,
 computes descriptive statistics and runs statistical tests, and returns
-plain dicts.  The SwiftUI frontend handles all chart rendering via
-Apple's Charts framework.
+plain dicts.  The SwiftUI frontend renders charts natively via Core
+Graphics (`ChartCanvasView` + renderer package).
 
-### Key API endpoint: POST /analyze
+### Key API endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/health` | GET | Liveness check |
+| `/chart-types` | GET | List all 29 chart types with priority subset |
+| `/analyze` | POST | Raw analysis: `{chart_type, excel_path, config}` → flat dict |
+| `/render` | POST | Bridge for SwiftUI: `{chart_type, kw}` → nested `ChartSpec` JSON |
+| `/upload` | POST | Accept .xlsx/.xls/.csv, save to temp dir, return path |
+| `/sheet-list` | POST | List sheet names in an Excel file |
+| `/validate-table` | POST | Validate spreadsheet layout for a chart type |
+| `/render-latex` | POST | Render LaTeX formula to PNG (for Stats Wiki) |
+| `/data-preview` | POST | Preview spreadsheet contents |
+| `/recommend-test` | POST | Suggest appropriate statistical test |
+| `/analyze-stats` | POST | Run stats-only analysis (no chart spec) |
+| `/analyze-layout` | POST | Detect data layout, recommend chart types |
+| `/curve-models` | GET | List curve fitting models by category |
+| `/curve-fit` | POST | Fit a model to X/Y data |
+| `/transforms` | GET | List available column transforms |
+| `/transform` | POST | Apply a transform to a column |
+| `/project/save-refract` | POST | Save .refract project archive |
+| `/project/save` | POST | Save project (legacy) |
+| `/project/load` | POST | Load .refract project archive |
+
+### POST /analyze (example)
 
 ```json
-Request:
-{
-  "chart_type": "bar",
-  "excel_path": "/path/to/data.xlsx",
-  "config": {
-    "error_type": "sem",
-    "stats_test": "parametric",
-    "posthoc": "Tukey HSD",
-    "mc_correction": "Holm-Bonferroni",
-    "control": null,
-    "title": "My Chart",
-    "x_label": "",
-    "y_label": ""
-  }
-}
+Request:  {"chart_type": "bar", "excel_path": "/path/to/data.xlsx",
+           "config": {"error_type": "sem", "stats_test": "parametric"}}
 
-Response:
-{
-  "ok": true,
-  "chart_type": "bar",
-  "groups": [
-    {"name": "Control", "mean": 5.0, "median": 5.1, "sd": 1.2,
-     "sem": 0.42, "ci95": 0.96, "n": 8, "values": [...],
-     "error": 0.42, "error_type": "sem", "color": "#E8453C"}
-  ],
-  "comparisons": [
-    {"group_a": "Control", "group_b": "Drug A",
-     "p_value": 0.003, "stars": "**"}
-  ],
-  "title": "My Chart", "x_label": "", "y_label": ""
-}
+Response: {"ok": true, "chart_type": "bar",
+           "groups": [{"name": "Control", "mean": 5.0, "sem": 0.42, ...}],
+           "comparisons": [{"group_a": "Control", "group_b": "Drug A",
+                            "p_value": 0.003, "stars": "**"}]}
 ```
 
 ### Config keys

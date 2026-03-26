@@ -52,6 +52,9 @@ They communicate over HTTP on `localhost:7331`.
 │              │  /analyze       │ ← raw analysis      │
 │              │  /upload        │ ← file upload       │
 │              │  /health        │ ← liveness check    │
+│              │  /sheet-list    │ ← Excel sheet names  │
+│              │  /validate-table│ ← layout validation  │
+│              │  /render-latex  │ ← LaTeX → PNG        │
 │              │  /data-preview  │ ← spreadsheet peek  │
 │              │  /recommend-test│ ← test suggestion   │
 │              │  /analyze-stats │ ← stats-only run    │
@@ -118,6 +121,9 @@ or as a subprocess managed by the Swift app's `PythonServer` class.
 | `/analyze` | POST | Raw analysis — takes `{chart_type, excel_path, config}`, returns flat results |
 | `/render` | POST | **Bridge for SwiftUI** — takes `{chart_type, kw}`, calls analyze, transforms into `ChartSpec` format |
 | `/upload` | POST | Accepts `.xlsx/.xls/.csv` via multipart upload, saves to temp dir, returns path |
+| `/sheet-list` | POST | Lists sheet names in an Excel file |
+| `/validate-table` | POST | Validates spreadsheet layout for a given chart type |
+| `/render-latex` | POST | Renders a LaTeX formula to PNG image (used by Stats Wiki) |
 | `/data-preview` | POST | Returns a preview of spreadsheet contents for the data table view |
 | `/recommend-test` | POST | Suggests an appropriate statistical test based on data characteristics |
 | `/analyze-stats` | POST | Runs statistical analysis only (no chart spec generation) |
@@ -290,9 +296,10 @@ view hierarchy via `.environment()`, and manages the Python server lifecycle.
 ```swift
 @Observable
 final class AppState {
-    var selectedChartType: ChartType = .bar
-    var chartConfig = ChartConfig()
-    var currentSpec: ChartSpec?
+    var experiments: [Experiment] = []         // top-level containers
+    var selectedExperimentID: UUID?            // active experiment
+    var selectedItemID: UUID?                  // active item within experiment
+    var selectedItemKind: ItemKind = .graph    // dataTable, graph, or analysis
     var isLoading: Bool = false
     var error: String?
 }
@@ -303,8 +310,13 @@ to it. When any property changes, SwiftUI automatically re-renders only
 the views that depend on that property.
 
 **Key methods:**
-- `generatePlot()` — async, calls the API, sets `currentSpec`
-- `uploadFile(url:)` — async, uploads file, sets `chartConfig.excelPath`
+- `addExperiment()` / `removeExperiment()` — manage experiments
+- `addDataTable()` / `addGraph()` / `addAnalysis()` — add items within an experiment
+- `selectItem(_ id, kind:)` — navigate to a specific item
+- `generatePlot()` — async, calls the API, sets graph's `chartSpec`
+- `uploadFile(url:, for:)` — async, uploads file, sets data table path
+- `runAnalysis()` — async, runs standalone stats analysis
+- `saveProjectFile()` / `loadProjectFromURL()` — .refract file I/O
 
 ### 3.3 View Hierarchy
 
@@ -314,24 +326,29 @@ multiple sheet types per graph, and Format dialogs:
 ```
 RefractionApp
 └── ContentView
-    ├── Sidebar: NavigatorView (Prism-style project navigator)
-    │   └── Tree of Sheets (Data Tables, Graphs, Results, Info)
+    ├── Sidebar: NavigatorView (Prism-style experiment navigator)
+    │   └── Tree of Experiments → DataTables + Graphs + Analyses
+    │       ├── NewExperimentDialog
+    │       ├── NewDataTableDialog
+    │       └── NewGraphDialog
     │
-    ├── Content: Sheet Area (depends on selected sheet type)
-    │   ├── GraphSheetView     → ChartCanvasView (renders the chart)
+    ├── Content: Sheet Area (depends on selected item kind)
+    │   ├── GraphSheetView     → ChartCanvasView + ChartOverlayView
     │   ├── DataTableView      → Spreadsheet-style data editor
     │   ├── ResultsSheetView   → Statistical results display
-    │   ├── InfoSheetView      → Metadata / notes
-    │   └── WelcomeView        → First-run experience
+    │   └── InfoSheetView      → Metadata / notes
     │
     ├── Dialogs (modal):
     │   ├── FormatGraphDialog   — Prism-style graph formatting
     │   ├── FormatAxesDialog    — Prism-style axes formatting
     │   ├── AnalyzeDataDialog   — Run analysis on data
-    │   ├── StatsWikiDialog     — Statistical test encyclopedia
-    │   └── StatsTestDetailDialog — Individual test details
+    │   ├── ExportChartDialog   — Export with DPI/format/size options
+    │   ├── StatsWikiDialog     — Stats test encyclopedia (LaTeX formulas)
+    │   ├── StatsTestDetailDialog — Individual test details
+    │   └── ArchitectureGuideDialog — Architecture reference
     │
     ├── ToolbarBanner — Status messages and actions
+    ├── DebugConsoleView — API trace / engine log viewer
     │
     └── Detail: ConfigTabView (tab bar)
         ├── DataTabView    — file picker, sheet selector, labels
@@ -346,21 +363,35 @@ Charts are drawn natively using Apple's `Canvas` view with `GraphicsContext`
 — there's no web view, no Plotly, no third-party charting library.
 
 ```
-ChartCanvasView
-├── AxisRenderer.draw()      — spines, ticks, labels, title
-├── BarRenderer.draw()       — bars, error bars, data points
-└── BracketRenderer.draw()   — significance brackets ("***", "ns")
+ChartCanvasView + ChartOverlayView (interactive hit regions, zoom)
+├── AxisRenderer.draw()          — spines, ticks, labels, title, grid
+├── BarRenderer.draw()           — bars, error bars, data points
+├── BoxRenderer.draw()           — box plots (whiskers, median, quartiles)
+├── ViolinRenderer.draw()        — violin plots (KDE curves)
+├── ScatterRenderer.draw()       — scatter plots
+├── LineRenderer.draw()          — line graphs
+├── HistogramRenderer.draw()     — histograms
+├── GroupedBarRenderer.draw()    — grouped bar charts
+├── StackedBarRenderer.draw()    — stacked bar charts
+├── DotPlotRenderer.draw()       — dot plots
+├── BeforeAfterRenderer.draw()   — before/after paired charts
+├── KaplanMeierRenderer.draw()   — survival curves
+└── BracketRenderer.draw()       — significance brackets ("***", "ns")
 ```
 
 The renderers live in a separate Swift Package (`RefractionRenderer/`)
-so they can be built and tested independently.
+so they can be built and tested independently. `HitRegion.swift` provides
+interactive hit testing for chart elements.
 
-**Renderer themes** (in `RenderTheme.swift`):
-- **Prism** (default): white, open L-shaped axes, no grid
-- **ggplot2**: gray background, white grid, no spines
-- **Minimal**: white, light horizontal grid
-- **Classic**: white, full grid, box axes
-- **Dark**: dark background, open axes
+**Format settings** are merged into the engine-provided `ChartSpec` by
+`FormatSettingsMerger.swift`, which bridges the Format Graph/Axes dialogs
+to the renderer without re-running analysis.
+
+**Render style presets** (in `RenderStyle.swift`, client-side only):
+- **Default**: clean with light grid
+- **Prism**: L-shaped axes, no grid, bold (GraphPad Prism style)
+- **ggplot2**: gray background, white grid lines (R ggplot2 style)
+- **Matplotlib**: full frame, dashed grid (Python matplotlib style)
 
 ### 3.5 Services
 
@@ -368,6 +399,12 @@ so they can be built and tested independently.
 - `analyze(chartType:, config:)` → POST /render
 - `upload(fileURL:)` → POST /upload (multipart)
 - `health()` → GET /health
+- All requests/responses logged to `DebugLog` with timing
+
+**`DebugLog.swift`** — centralized debug logger (singleton):
+- Captures API requests/responses, engine traces, app events, errors
+- Ring buffer (500 entries max), displayed in `DebugConsoleView`
+- Logs Python tracebacks from server error responses
 
 **`PythonServer.swift`** — manages the Python subprocess:
 - Finds the right Python binary (bundled > env var > well-known paths > system)
@@ -392,10 +429,23 @@ the API expects.
 Has a custom `Decodable` init that can parse both our native format and
 legacy Plotly JSON.
 
-**`DataTable`** — Prism-style data table model for the spreadsheet view.
+**`Experiment`** — Top-level container. Owns multiple `DataTable`s,
+`Graph`s, and `Analysis` objects. Provides methods for adding/removing
+items and lookups (`dataTable(for:)`, `validChartTypes(for:)`).
 
-**`Sheet`** — Represents a single sheet within a project (graph, data,
-results, or info).
+**`DataTable`** — Data table within an experiment. Has a `TableType`, an
+optional file path, and constrains which chart types are valid.
+
+**`Graph`** — Graph within an experiment. Links to one `DataTable` by ID.
+Holds `chartType`, `chartConfig`, cached `chartSpec`, `formatSettings`,
+`formatAxesSettings`, `renderStyle`, and `zoomLevel`.
+
+**`Analysis`** — Statistical analysis within an experiment. Links to one
+`DataTable` by ID. Holds `analysisType`, `statsResults`, and `notes`.
+
+**`RenderStyle`** — Enum of client-side render style presets (Default,
+Prism, ggplot2, Matplotlib). Each applies visual settings to format
+settings objects.
 
 **`TableType`** — Enum matching Prism's eight data table types (XY, Column,
 Grouped, Contingency, Survival, Parts of whole, Multiple variables, Nested).
@@ -403,10 +453,12 @@ Grouped, Contingency, Survival, Parts of whole, Multiple variables, Nested).
 **`FormatGraphSettings`** / **`FormatAxesSettings`** — Settings models for
 the Prism-style Format Graph and Format Axes dialogs.
 
-**`ProjectState`** — Multi-sheet project state with navigator tree.
+**`ProjectState`** — Project state for save/load serialization.
 
 **`StatsTestCatalog`** — Encyclopedia of statistical tests with descriptions,
-assumptions, and usage guidance.
+assumptions, and usage guidance. Formulas use `$...$` LaTeX markup.
+
+**`ArchitectureGuideCatalog`** — Architecture reference guide content.
 
 ---
 
@@ -912,42 +964,55 @@ RefractionApp/
 └── Refraction/
     ├── App/
     │   ├── RefractionApp.swift  # @main entry point, server lifecycle
-    │   └── AppState.swift       # Central @Observable state
+    │   └── AppState.swift       # Central @Observable state (experiments, selection)
     ├── Models/
+    │   ├── Experiment.swift     # Top-level container: DataTables + Graphs + Analyses
+    │   ├── DataTable.swift      # Data table within an experiment
+    │   ├── Graph.swift          # Graph within an experiment (chart type, config, spec)
+    │   ├── Analysis.swift       # Statistical analysis within an experiment
+    │   ├── RenderStyle.swift    # Render style presets (Default/Prism/ggplot2/Matplotlib)
     │   ├── ChartType.swift      # Chart type enum (29 types)
     │   ├── ChartConfig.swift    # ~40 config properties + toDict()
-    │   ├── DataTable.swift      # Prism-style data table model
-    │   ├── Sheet.swift          # Sheet model (graph/data/results/info)
     │   ├── TableType.swift      # Data table type enum (XY, Column, etc.)
     │   ├── FormatGraphSettings.swift   # Graph formatting settings
     │   ├── FormatAxesSettings.swift    # Axes formatting settings
-    │   ├── ProjectState.swift   # Multi-sheet project state
-    │   └── StatsTestCatalog.swift      # Stats test encyclopedia
+    │   ├── ProjectState.swift   # Project state for save/load
+    │   ├── StatsTestCatalog.swift      # Stats test encyclopedia
+    │   └── ArchitectureGuideCatalog.swift  # Architecture reference content
     ├── Services/
     │   ├── APIClient.swift      # HTTP client (actor, singleton)
-    │   └── PythonServer.swift   # Python subprocess manager
+    │   ├── PythonServer.swift   # Python subprocess manager
+    │   └── DebugLog.swift       # Centralized debug logger (API trace, engine logs)
     ├── Views/
     │   ├── ContentView.swift    # Root layout
-    │   ├── WelcomeView.swift    # First-run experience
     │   ├── ErrorView.swift      # Error display + parsing
     │   ├── ToolbarBanner.swift  # Toolbar status banner
+    │   ├── DebugConsoleView.swift    # Debug console with API trace
+    │   ├── ExportChartDialog.swift   # Export (DPI, format, size)
+    │   ├── LaTeXView.swift      # LaTeX formula renderer
     │   ├── Chart/
-    │   │   ├── ChartCanvasView.swift   # Canvas rendering
-    │   │   ├── FormatGraphDialog.swift # Prism-style Format Graph dialog
-    │   │   └── FormatAxesDialog.swift  # Prism-style Format Axes dialog
+    │   │   ├── ChartCanvasView.swift       # Core Graphics canvas rendering
+    │   │   ├── ChartOverlayView.swift      # Interactive overlay (hit regions, zoom)
+    │   │   ├── FormatGraphDialog.swift     # Prism-style Format Graph dialog
+    │   │   ├── FormatAxesDialog.swift      # Prism-style Format Axes dialog
+    │   │   └── FormatSettingsMerger.swift  # Merges format overrides into ChartSpec
     │   ├── Sidebar/
-    │   │   ├── NavigatorView.swift     # Prism-style project navigator
-    │   │   └── ChartSidebarView.swift  # Chart type list
+    │   │   ├── NavigatorView.swift         # Experiment navigator
+    │   │   ├── ChartSidebarView.swift      # Chart type list
+    │   │   ├── NewExperimentDialog.swift   # New experiment dialog
+    │   │   ├── NewDataTableDialog.swift    # New data table dialog
+    │   │   └── NewGraphDialog.swift        # New graph dialog
     │   ├── Sheets/
-    │   │   ├── GraphSheetView.swift    # Graph sheet container
-    │   │   ├── DataTableView.swift     # Spreadsheet-style data editor
-    │   │   ├── ResultsSheetView.swift  # Statistical results sheet
-    │   │   ├── InfoSheetView.swift     # Info/metadata sheet
-    │   │   ├── AnalyzeDataDialog.swift # Analyze data dialog
-    │   │   ├── StatsWikiDialog.swift   # Stats test encyclopedia
-    │   │   └── StatsTestDetailDialog.swift  # Test detail dialog
+    │   │   ├── GraphSheetView.swift        # Graph sheet container
+    │   │   ├── DataTableView.swift         # Spreadsheet-style data editor
+    │   │   ├── ResultsSheetView.swift      # Statistical results sheet
+    │   │   ├── InfoSheetView.swift         # Info/metadata sheet
+    │   │   ├── AnalyzeDataDialog.swift     # Analyze data dialog
+    │   │   ├── StatsWikiDialog.swift       # Stats test encyclopedia
+    │   │   ├── StatsTestDetailDialog.swift # Test detail dialog
+    │   │   └── ArchitectureGuideDialog.swift # Architecture reference
     │   ├── Results/
-    │   │   └── ResultsView.swift      # Stats results table
+    │   │   └── ResultsView.swift           # Stats results table
     │   └── Config/
     │       ├── ConfigTabView.swift    # Tab container
     │       ├── DataTabView.swift      # File + labels
@@ -959,6 +1024,29 @@ RefractionApp/
             ├── drug_treatment.xlsx
             ├── time_series.xlsx
             └── survival_data.xlsx
+```
+
+### Renderer Package
+
+```
+RefractionRenderer/Sources/RefractionRenderer/
+├── ChartSpec.swift          # ChartSpec/GroupSpec/StyleSpec/AxisSpec structs
+├── AxisRenderer.swift       # Axes, ticks, labels, grid
+├── BarRenderer.swift        # Bar charts + error bars
+├── BoxRenderer.swift        # Box plots
+├── ViolinRenderer.swift     # Violin plots (KDE)
+├── ScatterRenderer.swift    # Scatter plots
+├── LineRenderer.swift       # Line graphs
+├── HistogramRenderer.swift  # Histograms
+├── GroupedBarRenderer.swift # Grouped bar charts
+├── StackedBarRenderer.swift # Stacked bar charts
+├── DotPlotRenderer.swift    # Dot plots
+├── BeforeAfterRenderer.swift # Before/after paired charts
+├── KaplanMeierRenderer.swift # Survival curves
+├── BracketRenderer.swift    # Significance brackets
+├── HitRegion.swift          # Interactive hit testing
+├── RenderHelpers.swift      # Shared drawing utilities
+└── RenderTheme.swift        # Theme definitions
 ```
 
 ### Tests
